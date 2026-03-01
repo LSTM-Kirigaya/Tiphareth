@@ -18,7 +18,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 console.log('activate ' + path.basename(__filename));
 
-const visitCache = new Map<string, number>();
 let groupIncreaseCache = 0;
 
 /** AnzuLeaf 迎新 OG 图静态配置（基于 IDENTITY / RESOURCES） */
@@ -34,32 +33,12 @@ export class OpenMcpChannel {
 
     @mapper.onGroup(qq_groups.OPENMCP_DEV, { memorySize: 50, at: true })
     async handleOpenMcpChannel(c: LagrangeContext<GroupMessage>) {
-
-        // if (c.message.user_id === qq_users.JIN_HUI) {
-        //     const now = Date.now();
-        //     const lastVisit = visitCache.get(c.message.user_id.toString());
-
-        //     const info = await c.getGroupMemberInfo(c.message.group_id, c.message.user_id);
-        //     const role = info['data'].role;
-        //     const name = info['data'].nickname;
-
-        //     if (!lastVisit || (now - lastVisit) > 10 * 60 * 1000) {
-        //         // c.sendMessage('检测到超级管理员，TIP 系统允许访问，正在执行 ' + JSON.stringify(commandResult));
-        //         visitCache.set(c.message.user_id.toString(), now);
-        //     }
-        // } else {
-        //     c.sendMessage('非法请求，TIP 系统拒绝访问');
-        //     return;
-        // }
-
-
         const commonMessages = c.message.message.filter(m => m.type !== 'at' && m.type !== 'reply');
         const groupId = c.message.group_id;
         const content = commonMessages.map(m => JSON.stringify(m.data)).join('');
         const reference = await getReplyMessage(c) || 'none';
 
         await qqAgentLoop(groupId, content, reference);
-
     }
 
     @mapper.onGroupIncrease(qq_groups.OPENMCP_DEV)

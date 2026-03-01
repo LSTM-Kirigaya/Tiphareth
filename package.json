@@ -27,7 +27,7 @@
     "fs": "^0.0.1-security",
     "json-bigint": "^1.0.0",
     "kill-port": "^2.0.1",
-    "lagrange.onebot": "2.0.0",
+    "lagrange.onebot": "2.0.1",
     "lucide-react": "^0.562.0",
     "morgan": "^1.10.0",
     "msgpackr": "^1.11.5",

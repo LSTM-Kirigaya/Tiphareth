@@ -18,24 +18,22 @@ server.onMounted(c => {
     registerTipHttpServer(c);
 });
 
-const type = process.env.LAGRANGE_WS_TYPE || 'forward-websocket';
+const type = (process.env.LAGRANGE_WS_TYPE as 'forward-websocket' | 'backward-websocket') || 'forward-websocket';
 const host = process.env.LAGRANGE_WS_HOST || '127.0.0.1';
-const port = process.env.LAGRANGE_WS_PORT || 3001;
-const access_token = process.env.LAGRANGE_WS_ACCESS_TOKEN;
-const pathRoute = process.env.LAGRANGE_WS_PATH;
+const port = Number(process.env.LAGRANGE_WS_PORT || 3001);
+const accessToken = process.env.LAGRANGE_WS_ACCESS_TOKEN;
+const mcpHost = process.env.MCP_HOST;
+const mcpPort = Number(process.env.MCP_PORT);
 
 server.launch({
     type,
     host,
-    port: Number(port),
-    ...(access_token ? { access_token } : {}),
-    ...(type === 'backward-websocket' && pathRoute ? { path: pathRoute } : {}),
-
-    mcp: true,
+    port,
+    accessToken,
     mcpOption: {
         enableMemory: true,
         enableWebsearch: true,
-        host: '0.0.0.0',
-        port: 3010,
+        host: mcpHost,
+        port: mcpPort
     }
 });

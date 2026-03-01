@@ -1,15 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import path from 'path';
-import fs from 'fs';
 
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// 从环境变量获取（推荐使用dotenv配置）
-const configPath = path.resolve(__dirname, '..', '..', 'config', 'tip.json');
-const VALID_AUTH_TOKEN = JSON.parse(fs.readFileSync(configPath, 'utf-8')).authToken;
+const VALID_AUTH_TOKEN = process.env.VALID_AUTH_TOKEN;
 
 export const authenticate = (req: Request, res: Response, next: NextFunction): void => {    
     const authHeader = req.headers['auth'] || 

@@ -59,7 +59,7 @@ async function getChangeLogEnglish(updateContent: string): Promise<string> {
     agent.setDefaultLLM({
         baseURL: 'https://api.deepseek.com',
         model: 'deepseek-chat',
-        apiToken: process.env['DEEPSEEK_API_TOKEN']
+        apiToken: process.env.OPENAI_MODEL
     });
 
     const message = '请将下面的更新日志翻译成 GitHub release 风格的英文说明，请只返回翻译后的结果，不要出现任何多余的前缀：\n' + updateContent;
