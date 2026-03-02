@@ -24,7 +24,7 @@ export async function qqAgentLoop(
         defaultLLM: {
             baseURL: process.env.OPENAI_BASE_URL,
             model: process.env.OPENAI_MODEL,
-            apiToken: process.env.OPENAI_API_KEY
+            apiToken: '1321321321'
         },
         skillPath: getSkillMdPath()
     });

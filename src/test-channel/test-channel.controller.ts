@@ -51,6 +51,9 @@ export class TestChannel {
         const groupId = c.message.group_id;
         const content = commonMessages.map(m => JSON.stringify(m.data)).join('');
         const reference = await getReplyMessage(c) || 'none';
+
+        console.log(c.message);
+        
         
         await qqAgentLoop(groupId, content, reference);
     }
