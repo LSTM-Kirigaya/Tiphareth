@@ -9,7 +9,9 @@
     "check-env:install": "node scripts/check-env.mjs --install",
     "start": "npx tsx src/main.ts",
     "build": "tsc",
-    "test": "mocha"
+    "test": "mocha",
+    "cron:test-news": "npx tsx src/openclaw/cron/run-test.ts daily-news",
+    "cron:test-github": "npx tsx src/openclaw/cron/run-test.ts github-trending"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.0.1",

@@ -38,22 +38,24 @@ export async function exportTodayGroupMessagesPdf(
 }
 
 /**
- * @description 获取过去24的消息
+ * @description 获取过去 N 小时的消息
  * @param context 
  * @param groupId 
+ * @param hours 小时数，默认 24
  * @param chunkSize 
  * @param limit 
  * @returns 
  */
-export async function getLast24HGroupMessages(
+export async function getLastNHoursGroupMessages(
     context: LagrangeContext<any>,
     groupId: number,
+    hours = 24,
     chunkSize = 50,
     limit = 3000,
 ): Promise<QueryMessageDto> {
 
     const now = Date.now() / 1000;
-    const startTime = now - 24 * 60 * 60;
+    const startTime = now - hours * 60 * 60;
 
     let messageId: number | undefined = undefined;
 
@@ -63,12 +65,11 @@ export async function getLast24HGroupMessages(
     let stopLoop = false;
 
     while (!stopLoop) {
-        const res = await context.getGroupMsgHistory(
-            groupId,
-            messageId,
-            chunkSize,
-            true
-        );
+        const res = await context.getGroupMsgHistory({
+            group_id: groupId,
+            message_id: messageId,
+            count: chunkSize,
+        });
 
         if (res instanceof Error || !res.data?.messages?.length) {
             break;
@@ -179,4 +180,14 @@ export async function getLast24HGroupMessages(
     console.log('word Count', wordCount);
 
     return queryMessageDto;
+}
+
+/** @description 获取过去 24 小时的消息（兼容旧调用） */
+export async function getLast24HGroupMessages(
+    context: LagrangeContext<any>,
+    groupId: number,
+    chunkSize = 50,
+    limit = 3000,
+): Promise<QueryMessageDto> {
+    return getLastNHoursGroupMessages(context, groupId, 24, chunkSize, limit);
 }

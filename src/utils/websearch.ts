@@ -10,7 +10,6 @@ import TurndownService from 'turndown';
  */
 export async function crawlUrlToMarkdown(url: string): Promise<string> {
     try {
-        console.log(`[CRAWLER] Crawling: ${url}`);
 
         const browser = await chromium.launch({
             headless: true,
@@ -59,7 +58,6 @@ export async function crawlUrlToMarkdown(url: string): Promise<string> {
             const markdown = turndownService.turndown(result.mainContent);
             const content = markdown.trim();
 
-            console.log(`[CRAWLER] Finished crawling: ${url}`);
             return content;
         } finally {
             await browser.close();

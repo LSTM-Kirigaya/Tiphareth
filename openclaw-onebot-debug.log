@@ -1,0 +1,8 @@
+2026-03-03T10:33:42.518Z [channel.sendMedia] entry {"to":"group:1046693162","text":"","mediaUrl":"https://kirigaya.cn/files/images/bird.png","keys":["cfg","to","accountId","replyToId","threadId","identity","gifPlayback","deps","silent","mediaLocalRoots","text","mediaUrl"]}
+2026-03-03T10:33:42.519Z [channel.sendMedia] fail: WebSocket not connected {}
+2026-03-03T10:34:12.213Z [channel.sendMedia] entry {"to":"group:1046693162","text":"","mediaUrl":"https://kirigaya.cn/files/images/bird.png","keys":["cfg","to","accountId","replyToId","threadId","identity","gifPlayback","deps","silent","mediaLocalRoots","text","mediaUrl"]}
+2026-03-03T10:34:12.215Z [channel.sendMedia] fail: WebSocket not connected {}
+2026-03-03T10:34:57.757Z [channel.sendMedia] entry {"to":"group:1046693162","text":"","mediaUrl":"https://kirigaya.cn/files/images/bird.png","keys":["cfg","to","accountId","replyToId","threadId","identity","gifPlayback","deps","silent","mediaLocalRoots","text","mediaUrl"]}
+2026-03-03T10:34:57.757Z [channel.sendMedia] fail: WebSocket not connected {}
+2026-03-03T10:48:29.483Z [channel.sendMedia] entry {"to":"group:1046693162","text":"","mediaUrl":"https://kirigaya.cn/files/images/bird.png","keys":["cfg","to","accountId","replyToId","threadId","identity","gifPlayback","deps","silent","mediaLocalRoots","text","mediaUrl"]}
+2026-03-03T10:48:29.484Z [channel.sendMedia] fail: WebSocket not connected {}

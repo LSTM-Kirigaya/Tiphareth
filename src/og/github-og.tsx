@@ -21,6 +21,13 @@ export type GithubRepo = z.infer<typeof GithubRepoSchema>;
 const BLACK = '#000000';
 const QR_SIZE = 52;
 const PATTERN_HEIGHT = 48;
+const AUTHOR_MAX = 10;
+const REPO_NAME_LINE_HEIGHT = 1.25;
+const DESC_LINE_HEIGHT = 1.5;
+const REPO_NAME_FONT_SIZE = 28;
+const DESC_FONT_SIZE = 16;
+
+const truncate = (s: string, max: number) => (s.length > max ? s.slice(0, max) + '…' : s);
 
 const getBase64Image = (imagePath: string): string => {
     try {
@@ -52,8 +59,9 @@ const GeometricAccent = () => (
         flexDirection: 'row',
         alignItems: 'stretch',
         gap: '10px',
-        marginTop: '12px',
+        marginTop: '8px',
         height: `${PATTERN_HEIGHT}px`,
+        flexShrink: 0,
     }}>
         <QuarterCirclePattern />
     </div>
@@ -72,7 +80,7 @@ export async function generateGithubTrendingCard(data: GithubRepo[]): Promise<st
         const fontData = readFileSync('./assets/fonts/NotoSansSC-Regular.ttf');
         const fontBold = readFileSync('./assets/fonts/NotoSansSC-Bold.ttf');
         const footerWithQR = FOOTER_RESOURCES.map(r => ({ ...r, qrBase64: getBase64Image(r.qrCode) }));
-        const reposWithQR = await Promise.all(data.slice(0, 5).map(async (repo) => ({
+        const reposWithQR = await Promise.all(data.map(async (repo) => ({
             ...repo,
             qrDataUrl: await linkToQR(repo.link),
         })));
@@ -91,20 +99,21 @@ export async function generateGithubTrendingCard(data: GithubRepo[]): Promise<st
                 color: '#000000',
                 padding: '50px',
             }}>
-                {/* 顶部：与 welcome-og 排版一致 */}
+                {/* 顶部：紧凑排版 */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    marginBottom: '60px',
+                    marginBottom: '32px',
+                    flexShrink: 0,
                 }}>
                     <div style={{
                         display: 'flex',
-                        fontSize: '110px',
+                        fontSize: '72px',
                         fontWeight: 900,
                         lineHeight: '0.9',
                         letterSpacing: '-4px',
                         color: '#000000',
-                        marginBottom: '30px',
+                        marginBottom: '16px',
                     }}>
                         Anz
                     </div>
@@ -113,11 +122,11 @@ export async function generateGithubTrendingCard(data: GithubRepo[]): Promise<st
                         flexDirection: 'row',
                         alignItems: 'flex-end',
                         justifyContent: 'space-between',
-                        marginBottom: '20px',
+                        marginBottom: '12px',
                     }}>
                         <div style={{
                             display: 'flex',
-                            fontSize: '110px',
+                            fontSize: '72px',
                             fontWeight: 900,
                             lineHeight: '0.9',
                             letterSpacing: '-4px',
@@ -160,36 +169,45 @@ export async function generateGithubTrendingCard(data: GithubRepo[]): Promise<st
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    flexGrow: 1,
-                    marginBottom: '40px',
+                    flex: 1,
+                    minHeight: 0,
+                    overflow: 'hidden',
+                    marginBottom: '24px',
                 }}>
                     {reposWithQR.length > 0 ? reposWithQR.map((repo, i) => (
                         <div key={i} style={{
                             display: 'flex',
                             flexDirection: 'row',
-                            paddingBottom: i < reposWithQR.length - 1 ? '24px' : 0,
-                            marginBottom: i < reposWithQR.length - 1 ? '24px' : 0,
+                            paddingBottom: i < reposWithQR.length - 1 ? '16px' : 0,
+                            marginBottom: i < reposWithQR.length - 1 ? '16px' : 0,
                             borderBottom: i < reposWithQR.length - 1 ? '1px solid #EEEEEE' : 'none',
                             gap: '16px',
                             alignItems: 'flex-start',
+                            flexShrink: 0,
                         }}>
-                            <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
+                            <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
                                 <div style={{
                                     display: 'flex',
-                                    fontSize: '28px',
+                                    fontSize: `${REPO_NAME_FONT_SIZE}px`,
                                     fontWeight: 900,
                                     color: '#000000',
                                     letterSpacing: '-1px',
                                     marginBottom: '8px',
+                                    lineHeight: REPO_NAME_LINE_HEIGHT,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
                                 }}>
                                     {repo.repoName}
                                 </div>
                                 <div style={{
                                     display: 'flex',
-                                    fontSize: '14px',
+                                    fontSize: `${DESC_FONT_SIZE}px`,
                                     color: '#666666',
-                                    lineHeight: 1.5,
-                                    marginBottom: '12px',
+                                    lineHeight: DESC_LINE_HEIGHT,
+                                    marginBottom: '8px',
+                                    overflow: 'hidden',
+                                    maxHeight: `${Math.ceil(DESC_FONT_SIZE * DESC_LINE_HEIGHT * 2)}px`,
                                 }}>
                                     {repo.description}
                                 </div>
@@ -198,13 +216,13 @@ export async function generateGithubTrendingCard(data: GithubRepo[]): Promise<st
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     gap: '16px',
-                                    fontSize: '12px',
+                                    fontSize: '14px',
                                     color: '#999999',
                                 }}>
                                     <span>{repo.language}</span>
                                     <span>{repo.stars}</span>
                                     <span style={{ fontWeight: 'bold', color: '#000000' }}>{repo.starsToday}</span>
-                                    <span>{repo.author}</span>
+                                    <span style={{ maxWidth: '80px', overflow: 'hidden' }}>{truncate(repo.author, AUTHOR_MAX)}</span>
                                 </div>
                             </div>
                             {repo.qrDataUrl ? (
@@ -223,8 +241,9 @@ export async function generateGithubTrendingCard(data: GithubRepo[]): Promise<st
                     display: 'flex',
                     flexDirection: 'column',
                     marginTop: 'auto',
+                    flexShrink: 0,
                 }}>
-                    <div style={{ display: 'flex', width: '100%', height: '2px', backgroundColor: '#000000', marginBottom: '25px' }} />
+                    <div style={{ display: 'flex', width: '100%', height: '2px', backgroundColor: '#000000', marginBottom: '16px' }} />
                     <div style={{
                         display: 'flex',
                         flexDirection: 'row',
@@ -232,7 +251,7 @@ export async function generateGithubTrendingCard(data: GithubRepo[]): Promise<st
                         alignItems: 'flex-end',
                     }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                            <div style={{ display: 'flex', fontSize: '64px', fontWeight: 900, color: '#000000', letterSpacing: '-2px', lineHeight: '1' }}>
+                            <div style={{ display: 'flex', fontSize: '48px', fontWeight: 900, color: '#000000', letterSpacing: '-2px', lineHeight: '1' }}>
                                 {monthDay}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'baseline', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -320,6 +339,24 @@ const mockRepos: GithubRepo[] = [
         link: 'https://github.com/vercel/next.js',
     },
     {
+        repoName: 'vercel/next.js',
+        description: 'React 全栈框架，支持 SSR 与静态导出',
+        language: 'TypeScript',
+        stars: '120k',
+        starsToday: '+256 stars today',
+        author: 'vercel',
+        link: 'https://github.com/vercel/next.js',
+    },
+    {
+        repoName: 'vercel/next.js',
+        description: 'React 全栈框架，支持 SSR 与静态导出',
+        language: 'TypeScript',
+        stars: '120k',
+        starsToday: '+256 stars today',
+        author: 'vercel',
+        link: 'https://github.com/vercel/next.js',
+    },
+        {
         repoName: 'vercel/next.js',
         description: 'React 全栈框架，支持 SSR 与静态导出',
         language: 'TypeScript',

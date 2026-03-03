@@ -17,6 +17,16 @@ export type NewsItem = z.infer<typeof NewsItemSchema>;
 
 const BLACK = '#000000';
 const QR_SIZE = 52;
+const AUTHOR_MAX = 8;
+const TITLE_LINE_HEIGHT = 1.25;
+const SUMMARY_LINE_HEIGHT = 1.45;
+const TITLE_FONT_SIZE = 28;
+const SUMMARY_FONT_SIZE = 16;
+
+const truncate = (s: string, max: number) => (s.length > max ? s.slice(0, max) + '…' : s);
+
+/** 防止 Windows 路径等含反斜杠的文本在 JSON 解析时破坏（如 LLM 返回的 "C:\" 等） */
+const sanitizeForRender = (s: string) => String(s ?? '').replace(/\\/g, '/');
 
 const getBase64Image = (imagePath: string): string => {
     try {
@@ -57,8 +67,9 @@ const GeometricAccent = () => (
         flexDirection: 'row',
         alignItems: 'stretch',
         gap: '10px',
-        marginTop: '12px',
+        marginTop: '8px',
         height: `${PATTERN_HEIGHT}px`,
+        flexShrink: 0,
     }}>
         <QuarterCirclePattern />
     </div>
@@ -69,8 +80,12 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
         const fontData = readFileSync('./assets/fonts/NotoSansSC-Regular.ttf');
         const fontBold = readFileSync('./assets/fonts/NotoSansSC-Bold.ttf');
         const footerWithQR = FOOTER_RESOURCES.map(r => ({ ...r, qrBase64: getBase64Image(r.qrCode) }));
-        const itemsWithQR = await Promise.all(data.slice(0, 5).map(async (item) => ({
+        const itemsWithQR = await Promise.all(data.map(async (item) => ({
             ...item,
+            title: sanitizeForRender(item.title),
+            summary: sanitizeForRender(item.summary),
+            author: sanitizeForRender(item.author),
+            tag: sanitizeForRender(item.tag),
             qrDataUrl: await linkToQR(item.link),
         })));
         const date = new Date();
@@ -88,20 +103,21 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
                 color: '#000000',
                 padding: '50px',
             }}>
-                {/* 顶部：与 welcome-og 排版一致 */}
+                {/* 顶部：紧凑排版 */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    marginBottom: '60px',
+                    marginBottom: '32px',
+                    flexShrink: 0,
                 }}>
                     <div style={{
                         display: 'flex',
-                        fontSize: '110px',
+                        fontSize: '72px',
                         fontWeight: 900,
                         lineHeight: '0.9',
                         letterSpacing: '-4px',
                         color: '#000000',
-                        marginBottom: '30px',
+                        marginBottom: '16px',
                     }}>
                         Anz
                     </div>
@@ -110,11 +126,11 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
                         flexDirection: 'row',
                         alignItems: 'flex-end',
                         justifyContent: 'space-between',
-                        marginBottom: '20px',
+                        marginBottom: '12px',
                     }}>
                         <div style={{
                             display: 'flex',
-                            fontSize: '110px',
+                            fontSize: '72px',
                             fontWeight: 900,
                             lineHeight: '0.9',
                             letterSpacing: '-4px',
@@ -153,40 +169,48 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
                     <div style={{ display: 'flex', width: '100%', height: '2px', backgroundColor: '#000000', marginTop: '10px' }} />
                 </div>
 
-                {/* 中部：文章列表 */}
+                {/* 中部：文章列表，固定高度防溢出 */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    flexGrow: 1,
-                    marginBottom: '40px',
+                    flex: 1,
+                    minHeight: 0,
+                    marginBottom: '24px',
+                    overflow: 'hidden',
                 }}>
                     {itemsWithQR.length > 0 ? itemsWithQR.map((news, i) => (
                         <div key={i} style={{
                             display: 'flex',
                             flexDirection: 'row',
-                            paddingBottom: i < itemsWithQR.length - 1 ? '24px' : 0,
-                            marginBottom: i < itemsWithQR.length - 1 ? '24px' : 0,
+                            paddingBottom: i < itemsWithQR.length - 1 ? '16px' : 0,
+                            marginBottom: i < itemsWithQR.length - 1 ? '16px' : 0,
                             borderBottom: i < itemsWithQR.length - 1 ? '1px solid #EEEEEE' : 'none',
-                            gap: '16px',
+                            gap: '12px',
                             alignItems: 'flex-start',
+                            flexShrink: 0,
                         }}>
-                            <div style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
+                            <div style={{ display: 'flex', flex: 1, flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
                                 <div style={{
                                     display: 'flex',
-                                    fontSize: '24px',
+                                    fontSize: `${TITLE_FONT_SIZE}px`,
                                     fontWeight: 900,
                                     color: '#000000',
                                     letterSpacing: '-1px',
-                                    marginBottom: '10px',
-                                    lineHeight: 1.3,
+                                    marginBottom: '8px',
+                                    lineHeight: TITLE_LINE_HEIGHT,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
                                 }}>
                                     {news.title}
                                 </div>
                                 <div style={{
                                     display: 'flex',
-                                    fontSize: '14px',
+                                    fontSize: `${SUMMARY_FONT_SIZE}px`,
                                     color: '#666666',
-                                    lineHeight: 1.5,
+                                    lineHeight: SUMMARY_LINE_HEIGHT,
+                                    overflow: 'hidden',
+                                    maxHeight: `${Math.ceil(SUMMARY_FONT_SIZE * SUMMARY_LINE_HEIGHT * 2)}px`,
                                 }}>
                                     {news.summary}
                                 </div>
@@ -196,13 +220,15 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
                                     <img src={news.qrDataUrl} style={{ display: 'flex', width: `${QR_SIZE}px`, height: `${QR_SIZE}px` }} />
                                     <div style={{
                                         display: 'flex',
-                                        fontSize: '10px',
+                                        fontSize: '12px',
                                         color: '#999999',
                                         letterSpacing: '1px',
                                         marginTop: '6px',
                                         textAlign: 'center',
+                                        maxWidth: '80px',
+                                        overflow: 'hidden',
                                     }}>
-                                        {news.tag} - {news.author}
+                                        {news.tag} - {truncate(news.author, AUTHOR_MAX)}
                                     </div>
                                 </div>
                             ) : null}
@@ -219,8 +245,9 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
                     display: 'flex',
                     flexDirection: 'column',
                     marginTop: 'auto',
+                    flexShrink: 0,
                 }}>
-                    <div style={{ display: 'flex', width: '100%', height: '2px', backgroundColor: '#000000', marginBottom: '25px' }} />
+                    <div style={{ display: 'flex', width: '100%', height: '2px', backgroundColor: '#000000', marginBottom: '16px' }} />
                     <div style={{
                         display: 'flex',
                         flexDirection: 'row',
@@ -228,7 +255,7 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
                         alignItems: 'flex-end',
                     }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                            <div style={{ display: 'flex', fontSize: '64px', fontWeight: 900, color: '#000000', letterSpacing: '-2px', lineHeight: '1' }}>
+                            <div style={{ display: 'flex', fontSize: '48px', fontWeight: 900, color: '#000000', letterSpacing: '-2px', lineHeight: '1' }}>
                                 {monthDay}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'baseline', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -285,11 +312,12 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
             fitTo: { mode: 'width', value: 2400 },
         });
 
-        const fileName = 'anzuleaf.png';
+        const fileName = 'daily-news.png';
         const pngBuffer = resvg.render().asPng();
 
         writeFileSync(fileName, pngBuffer);
-        const absolutePath = path.resolve(fileName);
+        // 使用正斜杠，避免 Windows 路径中的 \ 在 JSON 解析时导致 ParseError
+        const absolutePath = path.resolve(fileName).replace(/\\/g, '/');
 
         console.log(`🎉 今日文章卡片已生成: ${absolutePath}`);
 
