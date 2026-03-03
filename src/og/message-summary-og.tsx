@@ -274,24 +274,24 @@ export async function generateRelationGraph(
             if (!list.includes(e.target)) list.push(e.target);
             userToTopics.set(e.source, list);
         });
-        console.log('\n--- 用户 → 话题 连线 ---');
+        // console.log('\n--- 用户 → 话题 连线 ---');
         nodes.filter(n => n.type === 'user').forEach(u => {
             const topics = userToTopics.get(u.id) || [];
             console.log(`用户 [${u.id}] → 话题: ${topics.join(', ') || '(无)'}`);
         });
-        console.log('\n--- 连线坐标 (起点=用户圆心, 终点=话题菱形中心) ---');
+        // console.log('\n--- 连线坐标 (起点=用户圆心, 终点=话题菱形中心) ---');
         edges.forEach((e, i) => {
             const s = posMap[e.source];
             const t = posMap[e.target];
             if (!s || !t) {
-                console.log(`  [${i}] ${e.source} → ${e.target}: 缺少坐标 (source=${!!s}, target=${!!t})`);
+                // console.log(`  [${i}] ${e.source} → ${e.target}: 缺少坐标 (source=${!!s}, target=${!!t})`);
                 return;
             }
             const sx = s.x - GRAPH_LEFT;
             const sy = s.y - GRAPH_TOP;
             const tx = t.x - GRAPH_LEFT;
             const ty = t.y - GRAPH_TOP;
-            console.log(`  [${i}] ${e.source} → ${e.target}: 起点(${sx.toFixed(1)}, ${sy.toFixed(1)}) 终点(${tx.toFixed(1)}, ${ty.toFixed(1)})`);
+            // console.log(`  [${i}] ${e.source} → ${e.target}: 起点(${sx.toFixed(1)}, ${sy.toFixed(1)}) 终点(${tx.toFixed(1)}, ${ty.toFixed(1)})`);
         });
         const date = new Date();
         const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -329,17 +329,7 @@ export async function generateRelationGraph(
                                 color: COLORS.fg,
                                 lineHeight: '1',
                             }}>
-                                Anuz
-                            </div>
-                            <div style={{
-                                display: 'flex',
-                                fontSize: '64px',
-                                fontWeight: 900,
-                                letterSpacing: '-3px',
-                                color: COLORS.fg,
-                                lineHeight: '1',
-                            }}>
-                                Leaf.
+                                AnuzLeaf.
                             </div>
                         </div>
 
@@ -354,7 +344,7 @@ export async function generateRelationGraph(
                                 color: COLORS.muted,
                                 letterSpacing: '2px',
                             }}>
-                                anzuleaf relation map
+                                ANZULEAF RELATION MAP
                             </div>
                             <div style={{
                                 display: 'flex',
@@ -621,7 +611,7 @@ export async function generateRelationGraph(
                         display: 'flex',
                         flexDirection: 'row',
                         justifyContent: 'space-between',
-                        alignItems: 'flex-end',
+                        alignItems: 'flex-start',
                     }}>
                         {/* 左侧统计 */}
                         <div style={{
