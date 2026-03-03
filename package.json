@@ -11,7 +11,8 @@
     "build": "tsc",
     "test": "mocha",
     "cron:test-news": "npx tsx src/openclaw/cron/run-test.ts daily-news",
-    "cron:test-github": "npx tsx src/openclaw/cron/run-test.ts github-trending"
+    "cron:test-github": "npx tsx src/openclaw/cron/run-test.ts github-trending",
+    "cron:message-summary": "npx tsx src/openclaw/cron/message-summary.ts"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.0.1",

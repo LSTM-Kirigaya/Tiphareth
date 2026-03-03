@@ -277,7 +277,7 @@ export async function generateRelationGraph(
         // console.log('\n--- 用户 → 话题 连线 ---');
         nodes.filter(n => n.type === 'user').forEach(u => {
             const topics = userToTopics.get(u.id) || [];
-            console.log(`用户 [${u.id}] → 话题: ${topics.join(', ') || '(无)'}`);
+            // console.log(`用户 [${u.id}] → 话题: ${topics.join(', ') || '(无)'}`);
         });
         // console.log('\n--- 连线坐标 (起点=用户圆心, 终点=话题菱形中心) ---');
         edges.forEach((e, i) => {
@@ -813,17 +813,19 @@ export async function generateRelationGraph(
     }
 }
 
-// --- 执行 ---
-const CHAT_JSON = path.join(TIPHARETH_ROOT, "report", "summarize_chat.json");
-const USER_JSON = path.join(TIPHARETH_ROOT, "report", "summarize_user.json");
+// --- 直接执行时运行（被 import 时不执行）---
+const CHAT_JSON = path.join(TIPHARETH_ROOT, "report", "src", "summarize_chat.json");
+const USER_JSON = path.join(TIPHARETH_ROOT, "report", "src", "summarize_user.json");
 const OUTPUT_PNG = path.join(TIPHARETH_ROOT, "message-summary-og.png");
 
-if (!existsSync(CHAT_JSON) || !existsSync(USER_JSON)) {
-    console.error("❌ 请先运行 gen-summarize-json 脚本");
-    process.exit(1);
+const _currentFile = path.resolve(fileURLToPath(import.meta.url));
+if (process.argv[1] && path.resolve(process.argv[1]) === _currentFile) {
+    if (!existsSync(CHAT_JSON) || !existsSync(USER_JSON)) {
+        console.error("❌ 请先运行 gen-summarize-json 或 message-summary 脚本");
+        process.exit(1);
+    }
+    generateRelationGraph(CHAT_JSON, USER_JSON, OUTPUT_PNG).catch((err) => {
+        console.error(err);
+        process.exit(1);
+    });
 }
-
-generateRelationGraph(CHAT_JSON, USER_JSON, OUTPUT_PNG).catch((err) => {
-    console.error(err);
-    process.exit(1);
-});

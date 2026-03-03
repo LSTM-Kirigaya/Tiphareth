@@ -2,6 +2,9 @@
  * 每日 GitHub 热榜定时任务
  * 复用 Tiphareth src/services/github-trending + src/og/github-og 逻辑
  *
+ * 用法:
+ *   npx tsx src/openclaw/cron/github-trending.ts [--group 782833642] [--group 1046693162]
+ *
  * OpenClaw cron 配置示例：
  * openclaw cron add --name "每日GitHub热榜" --cron "0 9 * * *" --tz "Asia/Shanghai" \
  *   --session isolated \
@@ -10,29 +13,76 @@
  */
 
 import path from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
+import { execSync } from "child_process";
 import dotenv from "dotenv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, "../../..");
 
-export default async function (ctx: { onebot: any; groupIds: number[] }) {
-  process.chdir(projectRoot);
-  dotenv.config({ path: path.join(projectRoot, ".env") });
-
-  const { getGithubTrendingImage } = await import("../../services/github-trending.js");
-  const imagePath = await getGithubTrendingImage();
-
-  if (!imagePath) {
-    const msg = "今日 GitHub 热榜获取失败";
-    for (const gid of ctx.groupIds) {
-      await ctx.onebot.sendGroupMsg(gid, msg);
+function parseArgs(): { groups: number[] } {
+    const args = process.argv.slice(2);
+    const groups: number[] = [];
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === "--group" && args[i + 1]) {
+            const val = args[i + 1];
+            if (val.includes(",")) {
+                groups.push(...val.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n)));
+            } else {
+                const n = parseInt(val, 10);
+                if (!isNaN(n)) groups.push(n);
+            }
+            i++;
+        } else if (args[i].startsWith("--group=")) {
+            const val = args[i].slice(8);
+            if (val.includes(",")) {
+                groups.push(...val.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n)));
+            } else {
+                const n = parseInt(val, 10);
+                if (!isNaN(n)) groups.push(n);
+            }
+        }
     }
-    return msg;
-  }
-
-  for (const gid of ctx.groupIds) {
-    await ctx.onebot.sendGroupImage(gid, imagePath);
-  }
-  return `已向 ${ctx.groupIds.length} 个群发送今日 GitHub 热榜`;
+    return { groups };
 }
+
+function sendToGroups(imagePath: string, groupIds: number[]) {
+    const fileUrl = pathToFileURL(path.resolve(imagePath)).href;
+    for (const gid of groupIds) {
+        try {
+            execSync(
+                `openclaw message send --channel onebot --target group:${gid} --media "${fileUrl}"`,
+                { encoding: "utf-8", stdio: "pipe" }
+            );
+            console.log(`✅ 已发送到群 ${gid}`);
+        } catch (e: any) {
+            console.error(`❌ 发送到群 ${gid} 失败:`, e?.message ?? e);
+        }
+    }
+}
+
+export default async function run(ctx?: { groupIds?: number[] }) {
+    process.chdir(projectRoot);
+    dotenv.config({ path: path.join(projectRoot, ".env") });
+
+    const { groups } = parseArgs();
+    const groupIds = groups.length ? groups : (ctx?.groupIds ?? []);
+
+    const { getGithubTrendingImage } = await import("../../services/github-trending.js");
+    const imagePath = await getGithubTrendingImage();
+    if (!imagePath) {
+        console.error("❌ 图片生成失败");
+        return null;
+    }
+
+    const absoluteImagePath = path.resolve(projectRoot, imagePath);
+    console.log("图片生成在: " + absoluteImagePath);
+
+    if (groupIds.length) {
+        sendToGroups(absoluteImagePath, groupIds);
+    }
+
+    return absoluteImagePath;
+}
+
+if (process.argv[1]?.includes("github-trending")) run().catch(console.error);
