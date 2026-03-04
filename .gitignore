@@ -10,7 +10,6 @@ __pycache__
 *.pyi
 scripts/*.ts
 audio
-images
 logs
 *.sklearn
 config/*.story.yml
