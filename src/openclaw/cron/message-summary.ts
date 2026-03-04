@@ -10,11 +10,13 @@
  *   --sendTo <群号>  将结果图片发送到的群（可多次指定多个群）
  *   --lastHour <N>   统计过去 N 小时消息，默认 24
  *
+ * 环境变量 (来自 .env): LAGRANGE_WS_TYPE, LAGRANGE_WS_HOST, LAGRANGE_WS_PORT, LAGRANGE_WS_ACCESS_TOKEN
+ *
  * 或通过 onebot_run_script 调用（传入 ctx.onebot、ctx.groupIds；groupIds[0]=总结群，groupIds[1..]=发送目标群）
  */
 
 import path from "path";
-import { fileURLToPath, pathToFileURL } from "url";
+import { fileURLToPath } from "url";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import dotenv from "dotenv";
 
@@ -63,7 +65,7 @@ function parseArgs(): { group?: number; sendTo: number[]; lastHour: number } {
     return { group, sendTo, lastHour };
 }
 
-/** 将 openclaw-onebot 客户端适配为 historyMessages.getLastNHoursGroupMessages 所需的 context 接口 */
+/** 将 onebot_run_script 传入的 onebot 适配为 historyMessages 所需的 context 接口 */
 function createContextAdapter(onebot: {
     getGroupMsgHistory: (gid: number, opts: { message_id?: number; count: number }) => Promise<any[]>;
     getGroupInfo: (gid: number) => Promise<{ group_name?: string; member_count?: number } | null>;
@@ -88,35 +90,50 @@ function createContextAdapter(onebot: {
     };
 }
 
-async function ensureOneBotConnection(conn: {
-    connectForward: (config: any) => Promise<any>;
-    setWs: (ws: any) => void;
-    setupEchoHandler?: (ws: any) => void;
-}): Promise<void> {
-    const type = process.env.LAGRANGE_WS_TYPE || process.env.ONEBOT_WS_TYPE || "forward-websocket";
-    const host = process.env.LAGRANGE_WS_HOST || process.env.ONEBOT_WS_HOST || "127.0.0.1";
-    const port = parseInt(process.env.LAGRANGE_WS_PORT || process.env.ONEBOT_WS_PORT || "3001", 10);
-    const accessToken = process.env.LAGRANGE_WS_ACCESS_TOKEN || process.env.ONEBOT_WS_ACCESS_TOKEN;
-    const wsPath = process.env.LAGRANGE_WS_PATH || process.env.ONEBOT_WS_PATH || "/onebot/v11/ws";
-    const pathNorm = wsPath.startsWith("/") ? wsPath : `/${wsPath}`;
-    const wsUrl = `ws://${host}:${port}${pathNorm}`;
+async function doSummary(
+    context: any,
+    groupId: number,
+    sendToGroups: number[],
+    lastHour: number,
+    sendImage: (gid: number, imagePath: string) => Promise<void>
+): Promise<string> {
+    const { getLastNHoursGroupMessages } = await import("../../utils/historyMessages.js");
 
-    console.log("⏳ 正在连接 OneBot 后端...");
+    if (sendToGroups.length > 0) {
+        console.log(`📤 结果将发送到群: ${sendToGroups.join(", ")}`);
+    }
+    console.log(`📥 获取群 ${groupId} 过去 ${lastHour} 小时消息...`);
+    const rawJson = await getLastNHoursGroupMessages(context, groupId, lastHour);
+    console.log(`   消息数: ${rawJson.messageCount}, 字数: ${rawJson.wordCount}`);
 
-    const config = {
-        type,
-        host,
-        port,
-        accessToken,
-        path: pathNorm,
-    };
+    if (rawJson.messageCount === 0) {
+        throw new Error("无消息可总结");
+    }
 
-    const ws = await conn.connectForward(config);
-    conn.setWs(ws);
-    if (conn.setupEchoHandler) conn.setupEchoHandler(ws);
+    const { summarizeChatToTopics, summarizeUsersFromRaw } = await import("../../services/chat-summary.js");
+    const chatTopics = await summarizeChatToTopics(rawJson);
+    const userTitles = summarizeUsersFromRaw(rawJson);
 
-    console.log("✅ WebSocket 连接成功，可进行后续操作");
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    const reportDir = path.join(TIPHARETH_ROOT, "report");
+    mkdirSync(reportDir, { recursive: true });
+
+    const chatPath = path.join(reportDir, "summarize_chat.json");
+    const userPath = path.join(reportDir, "summarize_user.json");
+    writeFileSync(chatPath, JSON.stringify({ messages: chatTopics }, null, 2), "utf-8");
+    writeFileSync(userPath, JSON.stringify({ titles: userTitles }, null, 2), "utf-8");
+    console.log(`📄 已写入: ${chatPath} 和 ${userPath}`);
+
+    const { generateRelationGraph } = await import("../../og/message-summary-og");
+    const outputPath = path.join(TIPHARETH_ROOT, "message-summary-og.png");
+    await generateRelationGraph(chatPath, userPath, outputPath);
+    console.log(`✅ 已生成: ${outputPath}`);
+
+    for (const gid of sendToGroups) {
+        await sendImage(gid, outputPath);
+        console.log(`📤 已发送到群 ${gid}`);
+    }
+
+    return sendToGroups.length > 0 ? `已向 ${sendToGroups.length} 个群发送话题关系图` : outputPath;
 }
 
 export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
@@ -139,114 +156,57 @@ export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
         process.exit(1);
     }
 
-    let onebot: {
-        getGroupMsgHistory: (gid: number, opts: { message_id?: number; count: number }) => Promise<any[]>;
-        getGroupInfo: (gid: number) => Promise<any>;
-        getGroupMemberInfo: (gid: number, uid: number) => Promise<any>;
-        sendGroupImage?: (gid: number, imagePath: string) => Promise<any>;
-    };
-
-    let stopConnection: (() => void) | undefined;
-
     if (ctx?.onebot?.getGroupMsgHistory) {
         console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         console.log("✅ 使用已建立的 OneBot 连接（来自 onebot_run_script）");
         console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        onebot = ctx.onebot;
-    } else {
-        const connPath = path.join(TIPHARETH_ROOT, "..", "openclaw-onebot", "dist", "connection.js");
-        const connMod = await import(pathToFileURL(connPath).href);
-        const {
-            connectForward,
-            setWs,
-            getGroupMsgHistory,
-            getGroupInfo,
-            getGroupMemberInfo,
-            sendGroupImage,
-            handleEchoResponse,
-        } = connMod;
-        stopConnection = connMod.stopConnection;
 
-        let ws = connMod.getWs?.();
-        if (!ws || ws.readyState !== 1) {
-            await ensureOneBotConnection({
-                connectForward,
-                setWs,
-                setupEchoHandler: (socket: any) => {
-                    socket.on("message", (data: Buffer) => {
-                        try {
-                            handleEchoResponse(JSON.parse(data.toString()));
-                        } catch {}
-                    });
-                },
-            });
-        } else {
-            console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            console.log("✅ WebSocket 已连接，跳过连接步骤");
-            console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        }
+        const context = createContextAdapter(ctx.onebot);
+        const sendImage = ctx.onebot.sendGroupImage
+            ? async (gid: number, imagePath: string) => {
+                  await ctx.onebot.sendGroupImage(gid, imagePath);
+              }
+            : async () => {
+                  console.warn("⚠️ 无法发送：ctx.onebot 无 sendGroupImage");
+              };
 
-        onebot = { getGroupMsgHistory, getGroupInfo, getGroupMemberInfo, sendGroupImage };
+        return doSummary(context, groupId, sendToGroups, lastHour, sendImage);
     }
 
-    const context = createContextAdapter(onebot);
-    const { getLastNHoursGroupMessages } = await import("../../utils/historyMessages.js");
+    const type = (process.env.LAGRANGE_WS_TYPE || process.env.ONEBOT_WS_TYPE || "forward-websocket") as
+        | "forward-websocket"
+        | "backward-websocket";
+    const host = process.env.LAGRANGE_WS_HOST || process.env.ONEBOT_WS_HOST || "127.0.0.1";
+    const port = Number(process.env.LAGRANGE_WS_PORT || process.env.ONEBOT_WS_PORT || 3001);
+    const accessToken = process.env.LAGRANGE_WS_ACCESS_TOKEN || process.env.ONEBOT_WS_ACCESS_TOKEN;
 
-    if (sendToGroups.length > 0) {
-        console.log(`📤 结果将发送到群: ${sendToGroups.join(", ")}`);
-    }
-    console.log(`📥 获取群 ${groupId} 过去 ${lastHour} 小时消息...`);
-    const rawJson = await getLastNHoursGroupMessages(context as any, groupId, lastHour);
-    console.log(`   消息数: ${rawJson.messageCount}, 字数: ${rawJson.wordCount}`);
+    const { LagrangeFactory } = await import("lagrange.onebot");
+    const server = LagrangeFactory.create([]);
 
-    if (rawJson.messageCount === 0) {
-        console.error("❌ 无消息可总结");
-        if (stopConnection) {
-            stopConnection();
-            console.log("🔌 WebSocket 已断开");
-        }
-        process.exit(1);
-    }
-
-    const { summarizeChatToTopics, summarizeUsersFromRaw } = await import("../../services/chat-summary.js");
-    const chatTopics = await summarizeChatToTopics(rawJson);
-    const userTitles = summarizeUsersFromRaw(rawJson);
-
-    const reportDir = path.join(TIPHARETH_ROOT, "report");
-    mkdirSync(reportDir, { recursive: true });
-
-    const chatPath = path.join(reportDir, "summarize_chat.json");
-    const userPath = path.join(reportDir, "summarize_user.json");
-    writeFileSync(chatPath, JSON.stringify({ messages: chatTopics }, null, 2), "utf-8");
-    writeFileSync(userPath, JSON.stringify({ titles: userTitles }, null, 2), "utf-8");
-    console.log(`📄 已写入: ${chatPath} 和 ${userPath}`);
-
-    const { generateRelationGraph } = await import("../../og/message-summary-og");
-    const outputPath = path.join(TIPHARETH_ROOT, "message-summary-og.png");
-    await generateRelationGraph(chatPath, userPath, outputPath);
-    console.log(`✅ 已生成: ${outputPath}`);
-
-    if (sendToGroups.length > 0) {
-        const sender = ctx?.onebot?.sendGroupImage ?? onebot.sendGroupImage;
-        if (sender) {
-            for (const gid of sendToGroups) {
-                await sender(gid, outputPath);
-                console.log(`📤 已发送到群 ${gid}`);
+    return new Promise<string>((resolve, reject) => {
+        server.onMounted(async (c: any) => {
+            try {
+                const sendImage = async (gid: number, imagePath: string) => {
+                    const absPath = path.isAbsolute(imagePath) ? imagePath : path.resolve(imagePath);
+                    const normalized = absPath.replace(/\\/g, "/");
+                    const fileUrl = normalized.startsWith("/") ? `file://${normalized}` : `file:///${normalized}`;
+                    await c.sendGroupMsg(gid, [{ type: "image", data: { file: fileUrl } }]);
+                };
+                const result = await doSummary(c, groupId, sendToGroups, lastHour, sendImage);
+                console.log(result);
+                resolve(result);
+            } catch (e) {
+                console.error(e);
+                process.exit(1);
             }
-        } else {
-            console.warn("⚠️ 无法发送：无 OneBot 发送能力");
-        }
-    }
+            process.exit(0);
+        });
 
-    if (stopConnection) {
-        stopConnection();
-        console.log("🔌 WebSocket 已断开，释放连接");
-    }
-
-    if (sendToGroups.length > 0) {
-        return `已向 ${sendToGroups.length} 个群发送话题关系图`;
-    }
-    return outputPath;
+        server
+            .launch({ type, host, port, accessToken, logger: false })
+            .then(() => {})
+            .catch(reject);
+    });
 }
 
 run()
