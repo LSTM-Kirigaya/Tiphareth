@@ -210,7 +210,7 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
                                     color: '#666666',
                                     lineHeight: SUMMARY_LINE_HEIGHT,
                                     overflow: 'hidden',
-                                    maxHeight: `${Math.ceil(SUMMARY_FONT_SIZE * SUMMARY_LINE_HEIGHT * 2)}px`,
+                                    maxHeight: `${Math.ceil(SUMMARY_FONT_SIZE * SUMMARY_LINE_HEIGHT * 3)}px`,
                                 }}>
                                     {news.summary}
                                 </div>

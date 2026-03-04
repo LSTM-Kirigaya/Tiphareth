@@ -3,9 +3,14 @@
  * 获取过去 N 小时消息 → LLM 总结 → 生成关系图
  *
  * 用法:
- *   npx tsx src/openclaw/cron/message-summary.ts --group 782833642 [--lastHour 24]
+ *   npx tsx src/openclaw/cron/message-summary.ts --group 782833642 --sendTo 1046693162 [--lastHour 24]
  *
- * 或通过 onebot_run_script 调用（传入 ctx.onebot 和 ctx.groupIds）
+ * 参数:
+ *   --group <群号>    要总结消息的群（必填）
+ *   --sendTo <群号>  将结果图片发送到的群（可多次指定多个群）
+ *   --lastHour <N>   统计过去 N 小时消息，默认 24
+ *
+ * 或通过 onebot_run_script 调用（传入 ctx.onebot、ctx.groupIds；groupIds[0]=总结群，groupIds[1..]=发送目标群）
  */
 
 import path from "path";
@@ -29,25 +34,33 @@ function loadEnv() {
     }
 }
 
-function parseArgs(): { group?: number; lastHour: number } {
+function parseArgs(): { group?: number; sendTo: number[]; lastHour: number } {
     const args = process.argv.slice(2);
     let group: number | undefined;
+    const sendTo: number[] = [];
     let lastHour = 24;
 
     for (let i = 0; i < args.length; i++) {
         if (args[i] === "--group" && args[i + 1]) {
             group = parseInt(args[i + 1], 10);
             i++;
+        } else if (args[i] === "--sendTo" && args[i + 1]) {
+            const g = parseInt(args[i + 1], 10);
+            if (!isNaN(g)) sendTo.push(g);
+            i++;
         } else if (args[i] === "--lastHour" && args[i + 1]) {
             lastHour = parseInt(args[i + 1], 10) || 24;
             i++;
         } else if (args[i].startsWith("--group=")) {
             group = parseInt(args[i].slice(8), 10);
+        } else if (args[i].startsWith("--sendTo=")) {
+            const g = parseInt(args[i].slice(9), 10);
+            if (!isNaN(g)) sendTo.push(g);
         } else if (args[i].startsWith("--lastHour=")) {
             lastHour = parseInt(args[i].slice(11), 10) || 24;
         }
     }
-    return { group, lastHour };
+    return { group, sendTo, lastHour };
 }
 
 /** 将 openclaw-onebot 客户端适配为 historyMessages.getLastNHoursGroupMessages 所需的 context 接口 */
@@ -110,11 +123,19 @@ export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
     process.chdir(TIPHARETH_ROOT);
     loadEnv();
 
-    const { group: groupArg, lastHour } = parseArgs();
+    const { group: groupArg, sendTo: sendToArg, lastHour } = parseArgs();
     const groupId = groupArg ?? ctx?.groupIds?.[0];
+    const sendToGroups =
+        sendToArg.length > 0
+            ? sendToArg
+            : ctx?.groupIds?.length === 1
+              ? ctx.groupIds
+              : ctx?.groupIds && ctx.groupIds.length > 1
+                ? ctx.groupIds.slice(1)
+                : ctx?.groupIds ?? [];
 
     if (!groupId) {
-        console.error("❌ 请指定 --group <群号>");
+        console.error("❌ 请指定 --group <群号>（要总结的群）");
         process.exit(1);
     }
 
@@ -122,6 +143,7 @@ export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
         getGroupMsgHistory: (gid: number, opts: { message_id?: number; count: number }) => Promise<any[]>;
         getGroupInfo: (gid: number) => Promise<any>;
         getGroupMemberInfo: (gid: number, uid: number) => Promise<any>;
+        sendGroupImage?: (gid: number, imagePath: string) => Promise<any>;
     };
 
     let stopConnection: (() => void) | undefined;
@@ -134,7 +156,15 @@ export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
     } else {
         const connPath = path.join(TIPHARETH_ROOT, "..", "openclaw-onebot", "dist", "connection.js");
         const connMod = await import(pathToFileURL(connPath).href);
-        const { connectForward, setWs, getGroupMsgHistory, getGroupInfo, getGroupMemberInfo, handleEchoResponse } = connMod;
+        const {
+            connectForward,
+            setWs,
+            getGroupMsgHistory,
+            getGroupInfo,
+            getGroupMemberInfo,
+            sendGroupImage,
+            handleEchoResponse,
+        } = connMod;
         stopConnection = connMod.stopConnection;
 
         let ws = connMod.getWs?.();
@@ -156,12 +186,15 @@ export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
             console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         }
 
-        onebot = { getGroupMsgHistory, getGroupInfo, getGroupMemberInfo };
+        onebot = { getGroupMsgHistory, getGroupInfo, getGroupMemberInfo, sendGroupImage };
     }
 
     const context = createContextAdapter(onebot);
     const { getLastNHoursGroupMessages } = await import("../../utils/historyMessages.js");
 
+    if (sendToGroups.length > 0) {
+        console.log(`📤 结果将发送到群: ${sendToGroups.join(", ")}`);
+    }
     console.log(`📥 获取群 ${groupId} 过去 ${lastHour} 小时消息...`);
     const rawJson = await getLastNHoursGroupMessages(context as any, groupId, lastHour);
     console.log(`   消息数: ${rawJson.messageCount}, 字数: ${rawJson.wordCount}`);
@@ -193,9 +226,15 @@ export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
     await generateRelationGraph(chatPath, userPath, outputPath);
     console.log(`✅ 已生成: ${outputPath}`);
 
-    if (ctx?.onebot?.sendGroupImage && ctx?.groupIds?.length) {
-        for (const gid of ctx.groupIds) {
-            await ctx.onebot.sendGroupImage(gid, outputPath);
+    if (sendToGroups.length > 0) {
+        const sender = ctx?.onebot?.sendGroupImage ?? onebot.sendGroupImage;
+        if (sender) {
+            for (const gid of sendToGroups) {
+                await sender(gid, outputPath);
+                console.log(`📤 已发送到群 ${gid}`);
+            }
+        } else {
+            console.warn("⚠️ 无法发送：无 OneBot 发送能力");
         }
     }
 
@@ -204,8 +243,8 @@ export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
         console.log("🔌 WebSocket 已断开，释放连接");
     }
 
-    if (ctx?.onebot?.sendGroupImage && ctx?.groupIds?.length) {
-        return `已向 ${ctx.groupIds.length} 个群发送话题关系图`;
+    if (sendToGroups.length > 0) {
+        return `已向 ${sendToGroups.length} 个群发送话题关系图`;
     }
     return outputPath;
 }
