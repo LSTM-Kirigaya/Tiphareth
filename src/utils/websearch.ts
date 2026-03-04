@@ -1,5 +1,19 @@
+import { createConnection } from 'net';
 import { chromium } from 'playwright';
 import TurndownService from 'turndown';
+
+const PROXY_PORT = 7890;
+
+/** 检测指定端口是否有进程在监听 */
+function isPortInUse(port: number): Promise<boolean> {
+    return new Promise((resolve) => {
+        const socket = createConnection(port, '127.0.0.1', () => {
+            socket.destroy();
+            resolve(true);
+        });
+        socket.on('error', () => resolve(false));
+    });
+}
 
 /**
  * 将指定 URL 的网页内容转换为 Markdown 格式
@@ -10,11 +24,16 @@ import TurndownService from 'turndown';
  */
 export async function crawlUrlToMarkdown(url: string): Promise<string> {
     try {
-
-        const browser = await chromium.launch({
+        const useProxy = await isPortInUse(PROXY_PORT);
+        const launchOptions: Parameters<typeof chromium.launch>[0] = {
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        });
+        };
+        if (useProxy) {
+            launchOptions.proxy = { server: `http://127.0.0.1:${PROXY_PORT}` };
+        }
+
+        const browser = await chromium.launch(launchOptions);
 
         try {
             const page = await browser.newPage();
