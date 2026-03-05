@@ -10,7 +10,7 @@
  *   --sendTo <群号>  将结果图片发送到的群（可多次指定多个群）
  *   --lastHour <N>   统计过去 N 小时消息，默认 24
  *
- * 环境变量 (来自 .env): LAGRANGE_WS_TYPE, LAGRANGE_WS_HOST, LAGRANGE_WS_PORT, LAGRANGE_WS_ACCESS_TOKEN
+ * 环境变量 (来自 .env): ONEBOT_WS_TYPE, ONEBOT_WS_HOST, ONEBOT_WS_PORT, ONEBOT_WS_ACCESS_TOKEN
  *
  * 或通过 onebot_run_script 调用（传入 ctx.onebot、ctx.groupIds；groupIds[0]=总结群，groupIds[1..]=发送目标群）
  */
@@ -173,12 +173,12 @@ export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
         return doSummary(context, groupId, sendToGroups, lastHour, sendImage);
     }
 
-    const type = (process.env.LAGRANGE_WS_TYPE || process.env.ONEBOT_WS_TYPE || "forward-websocket") as
+    const type = (process.env.ONEBOT_WS_TYPE || "forward-websocket") as
         | "forward-websocket"
         | "backward-websocket";
-    const host = process.env.LAGRANGE_WS_HOST || process.env.ONEBOT_WS_HOST || "127.0.0.1";
-    const port = Number(process.env.LAGRANGE_WS_PORT || process.env.ONEBOT_WS_PORT || 3001);
-    const accessToken = process.env.LAGRANGE_WS_ACCESS_TOKEN || process.env.ONEBOT_WS_ACCESS_TOKEN;
+    const host = process.env.ONEBOT_WS_HOST || "127.0.0.1";
+    const port = Number(process.env.ONEBOT_WS_PORT || 3001);
+    const accessToken = process.env.ONEBOT_WS_ACCESS_TOKEN;
 
     const { LagrangeFactory } = await import("lagrange.onebot");
     const server = LagrangeFactory.create([]);

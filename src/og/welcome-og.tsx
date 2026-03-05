@@ -76,7 +76,7 @@ const GeometricAccent = () => (
         flexDirection: 'row',
         alignItems: 'stretch',
         gap: '10px',
-        marginTop: '12px',
+        marginTop: '8px',
         height: `${PATTERN_HEIGHT}px`,
     }}>
         <QuarterCirclePattern />
@@ -124,8 +124,7 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
         const day = dateParts[2] || '28';
         const monthDay = `${month}/${day}`;
 
-        const groupNamePart1 = String(data.groupName ?? '').slice(0, 3);
-        const groupNamePart2 = String(data.groupName ?? '').slice(3) + '.';
+        const groupName = String(data.groupName ?? 'AnzuLeaf');
         const rawName = String(data.memberName ?? '');
         const displayName = rawName.length > 5 ? rawName.slice(0, 5) + '...' : rawName || '.';
 
@@ -140,87 +139,79 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                 color: '#000000',
                 padding: '50px',
             }}>
-                {/* 顶部：群名 + 身份描述（精简版） */}
+                {/* 左上角：标题（仿 github-og 的 AnzuLeaf 风格） */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    marginBottom: '60px',
+                    marginBottom: '24px',
+                    flexShrink: 0,
                 }}>
                     <div style={{
                         display: 'flex',
-                        fontSize: '110px',
+                        fontSize: '80px',
                         fontWeight: 900,
                         lineHeight: '0.9',
                         letterSpacing: '-4px',
                         color: '#000000',
-                        marginBottom: '30px',
+                        marginBottom: '12px',
                     }}>
-                        {groupNamePart1}
+                        Anz
                     </div>
                     <div style={{
                         display: 'flex',
                         flexDirection: 'row',
                         alignItems: 'flex-end',
                         justifyContent: 'space-between',
-                        marginBottom: '20px',
+                        marginBottom: '12px',
                     }}>
                         <div style={{
                             display: 'flex',
-                            fontSize: '110px',
+                            fontSize: '80px',
                             fontWeight: 900,
                             lineHeight: '0.9',
                             letterSpacing: '-4px',
                             color: '#000000',
                         }}>
-                            {groupNamePart2}
+                            uLeaf.
                         </div>
-
-                        {/* 右侧：社群身份精简文字 */}
                         <div style={{
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'flex-end',
                             maxWidth: '280px',
-                            marginBottom: '10px',
                         }}>
                             <div style={{
                                 display: 'flex',
-                                fontSize: '11px',
+                                fontSize: '12px',
                                 color: '#666666',
                                 letterSpacing: '1px',
                                 lineHeight: '1.6',
                                 textAlign: 'right',
                             }}>
-                                Agent 技术交流 · 开放项目合作
+                                {`技术交流 · ${groupName}`}
                             </div>
                             <div style={{
                                 display: 'flex',
-                                fontSize: '10px',
+                                fontSize: '13px',
                                 color: '#999999',
                                 letterSpacing: '0.5px',
                                 marginTop: '6px',
                             }}>
-                                AI AGENT COMMUNITY
+                                FACE THE FEAR, CREATE THE FUTURE
                             </div>
                         </div>
                     </div>
-
-                    {/* 分隔线 */}
-                    <div style={{
-                        display: 'flex',
-                        width: '100%',
-                        height: '2px',
-                        backgroundColor: '#000000',
-                        marginTop: '10px',
-                    }} />
+                    <div style={{ display: 'flex', width: '100%', height: '2px', backgroundColor: '#000000', marginTop: '10px' }} />
                 </div>
 
                 {/* 中部：成员信息区 */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    marginBottom: '50px',
-                    flexGrow: 1,
+                    flex: 1,
+                    minHeight: 0,
+                    overflow: 'hidden',
+                    marginBottom: '16px',
                 }}>
                     {/* WELCOME 行 */}
                     <div style={{
@@ -228,11 +219,11 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: '12px',
-                        marginBottom: '30px',
+                        marginBottom: '20px',
                     }}>
                         <div style={{
                             display: 'flex',
-                            fontSize: '12px',
+                            fontSize: '14px',
                             color: '#999999',
                             letterSpacing: '3px',
                         }}>
@@ -246,7 +237,7 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                         }} />
                         <div style={{
                             display: 'flex',
-                            fontSize: '12px',
+                            fontSize: '14px',
                             color: '#999999',
                             letterSpacing: '3px',
                         }}>
@@ -260,11 +251,11 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: '20px',
-                        marginBottom: '20px',
+                        marginBottom: '16px',
                     }}>
                         <div style={{
                             display: 'flex',
-                            fontSize: '90px',
+                            fontSize: '100px',
                             fontWeight: 900,
                             lineHeight: '1',
                             letterSpacing: '-2px',
@@ -274,8 +265,8 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                         </div>
                         <div style={{
                             display: 'flex',
-                            width: '90px',
-                            height: '90px',
+                            width: '100px',
+                            height: '100px',
                             backgroundColor: '#F5F5F5',
                             overflow: 'hidden',
                             flexShrink: 0,
@@ -309,12 +300,74 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                     {/* 几何装饰 */}
                     <GeometricAccent />
 
+                    {/* 社群介绍 - 无序列表 */}
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        marginTop: '24px',
+                        paddingTop: '16px',
+                        borderTop: '1px solid #EEEEEE',
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: '8px',
+                            marginBottom: '10px',
+                        }}>
+                            <div style={{
+                                display: 'flex',
+                                width: '6px',
+                                height: '6px',
+                                backgroundColor: '#000000',
+                            }} />
+                            <div style={{
+                                display: 'flex',
+                                fontSize: '11px',
+                                color: '#999999',
+                                letterSpacing: '2px',
+                            }}>
+                                ABOUT
+                            </div>
+                        </div>
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '6px',
+                        }}>
+                            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '8px' }}>
+                                <span style={{ display: 'flex', marginTop: '6px', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#000000', flexShrink: 0 }} />
+                                <div style={{ display: 'flex', fontSize: '13px', color: '#666666', lineHeight: 1.5, letterSpacing: '0.5px' }}>
+                                    Agent 前沿技术交流 · 开放式项目合作
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '8px' }}>
+                                <span style={{ display: 'flex', marginTop: '6px', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#000000', flexShrink: 0 }} />
+                                <div style={{ display: 'flex', fontSize: '13px', color: '#666666', lineHeight: 1.5, letterSpacing: '0.5px' }}>
+                                    OpenMCP → AnzuLeaf 技术交流群
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '8px' }}>
+                                <span style={{ display: 'flex', marginTop: '6px', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#000000', flexShrink: 0 }} />
+                                <div style={{ display: 'flex', fontSize: '13px', color: '#666666', lineHeight: 1.5, letterSpacing: '0.5px' }}>
+                                    AI 理论、应用、产品、设计均可讨论
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '8px' }}>
+                                <span style={{ display: 'flex', marginTop: '6px', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#000000', flexShrink: 0 }} />
+                                <div style={{ display: 'flex', fontSize: '13px', color: '#666666', lineHeight: 1.5, letterSpacing: '0.5px' }}>
+                                    学习资源或技术疑问欢迎 @TIP 提问
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* 群规区 - 极简形式 */}
                     <div style={{
                         display: 'flex',
                         flexDirection: 'column',
-                        marginTop: '50px',
-                        paddingTop: '20px',
+                        marginTop: '20px',
+                        paddingTop: '16px',
                         borderTop: '1px solid #EEEEEE',
                     }}>
                         <div style={{
@@ -332,7 +385,7 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                             }} />
                             <div style={{
                                 display: 'flex',
-                                fontSize: '10px',
+                                fontSize: '11px',
                                 color: '#999999',
                                 letterSpacing: '2px',
                             }}>
@@ -343,7 +396,7 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                         <div style={{
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '8px',
+                            gap: '6px',
                         }}>
                             <div style={{
                                 display: 'flex',
@@ -354,7 +407,7 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                                 <ForbiddenMark />
                                 <div style={{
                                     display: 'flex',
-                                    fontSize: '12px',
+                                    fontSize: '13px',
                                     color: '#666666',
                                     letterSpacing: '0.5px',
                                 }}>
@@ -370,7 +423,7 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                                 <ForbiddenMark />
                                 <div style={{
                                     display: 'flex',
-                                    fontSize: '12px',
+                                    fontSize: '13px',
                                     color: '#666666',
                                     letterSpacing: '0.5px',
                                 }}>
@@ -386,7 +439,7 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                                 <ForbiddenMark />
                                 <div style={{
                                     display: 'flex',
-                                    fontSize: '12px',
+                                    fontSize: '13px',
                                     color: '#666666',
                                     letterSpacing: '0.5px',
                                 }}>
@@ -397,19 +450,14 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                     </div>
                 </div>
 
-                {/* 底部：日期（左）+ 二维码组（右） */}
+                {/* 底部：日期（左）+ 二维码组（右，仿 github-og） */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    paddingBottom: '30px',
+                    marginTop: 'auto',
+                    flexShrink: 0,
                 }}>
-                    <div style={{
-                        display: 'flex',
-                        width: '100%',
-                        height: '2px',
-                        backgroundColor: '#000000',
-                        marginBottom: '25px',
-                    }} />
+                    <div style={{ display: 'flex', width: '100%', height: '2px', backgroundColor: '#000000', marginBottom: '16px' }} />
 
                     <div style={{
                         display: 'flex',
@@ -425,7 +473,7 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                         }}>
                             <div style={{
                                 display: 'flex',
-                                fontSize: '64px',
+                                fontSize: '72px',
                                 fontWeight: 900,
                                 color: '#000000',
                                 letterSpacing: '-2px',
@@ -434,11 +482,11 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                                 {monthDay}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'baseline', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
-                                <span style={{ display: 'flex', fontSize: '14px', fontWeight: 700, color: '#000000', letterSpacing: '2px' }}>{year}</span>
+                                <span style={{ display: 'flex', fontSize: '15px', fontWeight: 700, color: '#000000', letterSpacing: '2px' }}>{year}</span>
                                 <span style={{ display: 'flex', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#CCCCCC', marginTop: '6px' }} />
-                                <span style={{ display: 'flex', fontSize: '12px', color: '#666666', letterSpacing: '4px', fontWeight: 600 }}>Raspberry Pi 5</span>
+                                <span style={{ display: 'flex', fontSize: '13px', color: '#666666', letterSpacing: '4px', fontWeight: 600 }}>Raspberry Pi 5</span>
                                 <span style={{ display: 'flex', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#CCCCCC', marginTop: '6px' }} />
-                                <span style={{ display: 'flex', fontSize: '11px', color: '#AAAAAA', letterSpacing: '1px' }}>192.168.10.1</span>
+                                <span style={{ display: 'flex', fontSize: '12px', color: '#AAAAAA', letterSpacing: '1px' }}>192.168.10.1</span>
                             </div>
                             <div style={{
                                 display: 'flex',
@@ -491,7 +539,7 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
 
                                     <div style={{
                                         display: 'flex',
-                                        fontSize: '10px',
+                                        fontSize: '11px',
                                         fontWeight: 'bold',
                                         color: '#000000',
                                         marginBottom: '2px',
@@ -501,7 +549,7 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                                     </div>
                                     <div style={{
                                         display: 'flex',
-                                        fontSize: '8px',
+                                        fontSize: '9px',
                                         color: '#999999',
                                         letterSpacing: '0.5px',
                                     }}>

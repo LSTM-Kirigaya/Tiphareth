@@ -18,10 +18,10 @@ server.onMounted(c => {
     registerTipHttpServer(c);
 });
 
-const type = (process.env.LAGRANGE_WS_TYPE as 'forward-websocket' | 'backward-websocket') || 'forward-websocket';
-const host = process.env.LAGRANGE_WS_HOST || '127.0.0.1';
-const port = Number(process.env.LAGRANGE_WS_PORT || 3001);
-const accessToken = process.env.LAGRANGE_WS_ACCESS_TOKEN;
+const type = (process.env.ONEBOT_WS_TYPE as 'forward-websocket' | 'backward-websocket') || 'forward-websocket';
+const host = process.env.ONEBOT_WS_HOST || '127.0.0.1';
+const port = Number(process.env.ONEBOT_WS_PORT || 3001);
+const accessToken = process.env.ONEBOT_WS_ACCESS_TOKEN;
 const mcpHost = process.env.MCP_HOST;
 const mcpPort = Number(process.env.MCP_PORT);
 
