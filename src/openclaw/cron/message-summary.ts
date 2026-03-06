@@ -1,18 +1,18 @@
 /**
- * 群聊话题关系图定时任务
- * 获取过去 N 小时消息 → LLM 总结 → 生成关系图
+ * ???????????
+ * ???? N ???? -> LLM ?? -> ?????
  *
- * 用法:
+ * ??:
  *   npx tsx src/openclaw/cron/message-summary.ts --group 782833642 --sendTo 1046693162 [--lastHour 24]
  *
- * 参数:
- *   --group <群号>    要总结消息的群（必填）
- *   --sendTo <群号>  将结果图片发送到的群（可多次指定多个群）
- *   --lastHour <N>   统计过去 N 小时消息，默认 24
+ * ??:
+ *   --group <??>    ???????????
+ *   --sendTo <??>  ?????????????????
+ *   --lastHour <N>   ???? N ??????? 24
  *
- * 环境变量 (来自 .env): ONEBOT_WS_TYPE, ONEBOT_WS_HOST, ONEBOT_WS_PORT, ONEBOT_WS_ACCESS_TOKEN
+ * ???? (.env): ONEBOT_WS_TYPE, ONEBOT_WS_HOST, ONEBOT_WS_PORT, ONEBOT_WS_ACCESS_TOKEN
  *
- * 或通过 onebot_run_script 调用（传入 ctx.onebot、ctx.groupIds；groupIds[0]=总结群，groupIds[1..]=发送目标群）
+ * ??? onebot_run_script ????? ctx.onebot?ctx.groupIds?groupIds[0]=????groupIds[1..]=?????
  */
 
 import path from "path";
@@ -65,7 +65,7 @@ function parseArgs(): { group?: number; sendTo: number[]; lastHour: number } {
     return { group, sendTo, lastHour };
 }
 
-/** 将 onebot_run_script 传入的 onebot 适配为 historyMessages 所需的 context 接口 */
+/** ? onebot_run_script ??? onebot ??? historyMessages ??? context ?? */
 function createContextAdapter(onebot: {
     getGroupMsgHistory: (gid: number, opts: { message_id?: number; count: number }) => Promise<any[]>;
     getGroupInfo: (gid: number) => Promise<{ group_name?: string; member_count?: number } | null>;
@@ -77,15 +77,15 @@ function createContextAdapter(onebot: {
                 message_id: params.message_id,
                 count: params.count,
             });
-            return msgs?.length ? { data: { messages: msgs } } : new Error("无消息");
+            return msgs?.length ? { data: { messages: msgs } } : new Error("no messages");
         },
         getGroupInfo: async (groupId: number) => {
             const info = await onebot.getGroupInfo(groupId);
-            return info ? { data: { group_name: info.group_name, member_count: info.member_count } } : new Error("获取失败");
+            return info ? { data: { group_name: info.group_name, member_count: info.member_count } } : new Error("getGroupInfo failed");
         },
         getGroupMemberInfo: async (groupId: number, userId: number) => {
             const info = await onebot.getGroupMemberInfo(groupId, userId);
-            return info ? { data: { card: info.card, nickname: info.nickname } } : new Error("获取失败");
+            return info ? { data: { card: info.card, nickname: info.nickname } } : new Error("getGroupMemberInfo failed");
         },
     };
 }
@@ -100,14 +100,14 @@ async function doSummary(
     const { getLastNHoursGroupMessages } = await import("../../utils/historyMessages.js");
 
     if (sendToGroups.length > 0) {
-        console.log(`📤 结果将发送到群: ${sendToGroups.join(", ")}`);
+        console.log(`[send] target groups: ${sendToGroups.join(", ")}`);
     }
-    console.log(`📥 获取群 ${groupId} 过去 ${lastHour} 小时消息...`);
+    console.log(`[fetch] group ${groupId} | last ${lastHour}h...`);
     const rawJson = await getLastNHoursGroupMessages(context, groupId, lastHour);
-    console.log(`   消息数: ${rawJson.messageCount}, 字数: ${rawJson.wordCount}`);
+    console.log(`   messages: ${rawJson.messageCount}, chars: ${rawJson.wordCount}`);
 
     if (rawJson.messageCount === 0) {
-        throw new Error("无消息可总结");
+        throw new Error("no messages to summarize");
     }
 
     const { summarizeChatToTopics, summarizeUsersFromRaw } = await import("../../services/chat-summary.js");
@@ -121,19 +121,19 @@ async function doSummary(
     const userPath = path.join(reportDir, "summarize_user.json");
     writeFileSync(chatPath, JSON.stringify({ messages: chatTopics }, null, 2), "utf-8");
     writeFileSync(userPath, JSON.stringify({ titles: userTitles }, null, 2), "utf-8");
-    console.log(`📄 已写入: ${chatPath} 和 ${userPath}`);
+    console.log(`[write] ${chatPath} & ${userPath}`);
 
     const { generateRelationGraph } = await import("../../og/message-summary-og");
     const outputPath = path.join(TIPHARETH_ROOT, "message-summary-og.png");
     await generateRelationGraph(chatPath, userPath, outputPath);
-    console.log(`✅ 已生成: ${outputPath}`);
+    console.log(`[done] ${outputPath}`);
 
     for (const gid of sendToGroups) {
         await sendImage(gid, outputPath);
-        console.log(`📤 已发送到群 ${gid}`);
+        console.log(`[sent] group ${gid}`);
     }
 
-    return sendToGroups.length > 0 ? `已向 ${sendToGroups.length} 个群发送话题关系图` : outputPath;
+    return sendToGroups.length > 0 ? `sent to ${sendToGroups.length} group(s)` : outputPath;
 }
 
 export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
@@ -152,14 +152,12 @@ export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
                 : ctx?.groupIds ?? [];
 
     if (!groupId) {
-        console.error("❌ 请指定 --group <群号>（要总结的群）");
+        console.error("[err] --group <id> required");
         process.exit(1);
     }
 
     if (ctx?.onebot?.getGroupMsgHistory) {
-        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        console.log("✅ 使用已建立的 OneBot 连接（来自 onebot_run_script）");
-        console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        console.log("[ok] using existing OneBot connection (onebot_run_script)");
 
         const context = createContextAdapter(ctx.onebot);
         const sendImage = ctx.onebot.sendGroupImage
@@ -167,7 +165,7 @@ export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
                   await ctx.onebot.sendGroupImage(gid, imagePath);
               }
             : async () => {
-                  console.warn("⚠️ 无法发送：ctx.onebot 无 sendGroupImage");
+                  console.warn("[warn] ctx.onebot has no sendGroupImage");
               };
 
         return doSummary(context, groupId, sendToGroups, lastHour, sendImage);
@@ -197,15 +195,26 @@ export default async function run(ctx?: { onebot?: any; groupIds?: number[] }) {
                 resolve(result);
             } catch (e) {
                 console.error(e);
-                process.exit(1);
+                reject(e);
             }
-            process.exit(0);
         });
 
         server
-            .launch({ type, host, port, accessToken, logger: false })
+            .launch({
+                type,
+                host,
+                port,
+                accessToken,
+                logger: false,
+                configPath: path.join(TIPHARETH_ROOT, "__nonexistent_config__.json"),
+            })
             .then(() => {})
-            .catch(reject);
+            .catch((e) => {
+                console.error("\n[err] OneBot connect/launch failed:", e?.message ?? e);
+                console.error("   hint: lagrange.onebot requires getFriendList/getLoginInfo");
+                console.error("   NapCatQQ may not support these APIs");
+                reject(e);
+            });
     });
 }
 

@@ -8,13 +8,13 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TIPHARETH_ROOT = path.resolve(__dirname, '../..');
 
-// --- 极简黑白配色 (深色模式) ---
+// --- ?????? (????) ---
 const COLORS = {
     bg: '#0A0A0B',
     fg: '#FFFFFF',
     muted: '#666666',
     subtle: '#333333',
-    line: '#888888',  // 连线颜色，比 subtle 更亮以便与背景区分
+    line: '#888888',  // ?????? subtle ?????????
     accent: '#FFFFFF',
 };
 
@@ -22,16 +22,20 @@ const WIDTH = 1600;
 const HEIGHT = 1200;
 const PADDING = 80;
 
-// 图区域（与 computeLayout 一致，用于渲染坐标转换）
+// ????? computeLayout ????????????
 const GRAPH_LEFT = PADDING + 60;
 const GRAPH_TOP = 200;
-// 主视觉区内，图区域左上角相对偏移
+// ????????????????
 const GRAPH_OFFSET_X = GRAPH_LEFT - 60;
-const GRAPH_OFFSET_Y = 24;  // 标题区高度后，图区与主视觉顶部的间距
-// 渲染内边距：避免贴边连线描边被裁剪，起点终点逻辑不变，仅整体平移
-const RENDER_PADDING = 20;
+const GRAPH_OFFSET_Y = 24;  // ??????????????????
+// ?????? computeLayout ???????? SVG viewBox????????????
+const GRAPH_WIDTH = WIDTH - PADDING * 2 - 120;
+const GRAPH_HEIGHT = HEIGHT - 340 - GRAPH_TOP;
 
-// --- 极简几何装饰组件 ---
+// ??????????????????????????? true ??????
+const DEBUG_LINE_ENDPOINTS = false;
+
+// --- ???????? ---
 const QuarterCirclePattern = () => (
     <div style={{
         display: 'flex',
@@ -71,11 +75,11 @@ const QuarterCirclePattern = () => (
     </div>
 );
 
-// 用户节点：头像圆半径；话题节点：菱形半宽（中心到顶点）
+// ???????????????????????????
 const USER_NODE_RADIUS = 24;
-const TOPIC_DIAMOND_RADIUS = 54;  // 增大话题节点尺寸
+const TOPIC_DIAMOND_RADIUS = 54;  // ????????
 
-// 可复现的伪随机（固定种子，布局每次一致）
+// ????????????????????
 function seededRandom(seed: number) {
     return function () {
         seed = (seed * 9301 + 49297) % 233280;
@@ -83,14 +87,14 @@ function seededRandom(seed: number) {
     };
 }
 
-// --- Force Directed Layout：自由力导布局 ---
+// --- Force Directed Layout??????? ---
 function computeLayout(nodes: any[], edges: any[]) {
     const positions: Record<string, { x: number; y: number }> = {};
 
     if (nodes.length === 0) return positions;
 
     const graphTop = GRAPH_TOP;
-    const graphBottom = HEIGHT - 340;  // 与底部横线留出更多间距
+    const graphBottom = HEIGHT - 340;  // ???????????
     const graphLeft = GRAPH_LEFT;
     const graphRight = WIDTH - PADDING - 60;
 
@@ -120,7 +124,7 @@ function computeLayout(nodes: any[], edges: any[]) {
             disp[v.id] = { x: 0, y: 0 };
         });
 
-        // --- 斥力 ---
+        // --- ?? ---
         for (let i = 0; i < nodes.length; i++) {
             for (let j = i + 1; j < nodes.length; j++) {
                 const v = nodes[i];
@@ -142,7 +146,7 @@ function computeLayout(nodes: any[], edges: any[]) {
             }
         }
 
-        // --- 吸引力（边）---
+        // --- ??????---
         edges.forEach(e => {
             const v = e.source;
             const u = e.target;
@@ -164,7 +168,7 @@ function computeLayout(nodes: any[], edges: any[]) {
             disp[u].y += fy;
         });
 
-        // --- 更新位置 ---
+        // --- ???? ---
         nodes.forEach(v => {
             const dx = disp[v.id].x;
             const dy = disp[v.id].y;
@@ -174,7 +178,7 @@ function computeLayout(nodes: any[], edges: any[]) {
             positions[v.id].x += (dx / dist) * Math.min(dist, temperature);
             positions[v.id].y += (dy / dist) * Math.min(dist, temperature);
 
-            // 边界限制
+            // ????
             positions[v.id].x = Math.min(graphRight, Math.max(graphLeft, positions[v.id].x));
             positions[v.id].y = Math.min(graphBottom, Math.max(graphTop, positions[v.id].y));
         });
@@ -196,7 +200,7 @@ export async function generateRelationGraph(
             : path.join(TIPHARETH_ROOT, userJsonPath);
 
         if (!existsSync(chatPath) || !existsSync(userPath)) {
-            throw new Error(`数据文件不存在`);
+            throw new Error(`???????`);
         }
 
         const chatData = JSON.parse(readFileSync(chatPath, 'utf-8'));
@@ -205,7 +209,7 @@ export async function generateRelationGraph(
         const fontPath = path.join(TIPHARETH_ROOT, 'assets', 'fonts', 'NotoSansSC-Regular.ttf');
         const fontBoldPath = path.join(TIPHARETH_ROOT, 'assets', 'fonts', 'NotoSansSC-Bold.ttf');
 
-        if (!existsSync(fontPath)) throw new Error(`字体不存在: ${fontPath}`);
+        if (!existsSync(fontPath)) throw new Error(`?????: ${fontPath}`);
 
         const fontData = readFileSync(fontPath);
         const fontBold = existsSync(fontBoldPath) ? readFileSync(fontBoldPath) : fontData;
@@ -220,7 +224,7 @@ export async function generateRelationGraph(
             if (t?.qq) userMetaMap.set(String(t.qq), t);
         });
 
-        // 规范化：contributor 值 -> 规范节点 id（避免因空格、QQ/昵称混用等产生孤立节点）
+        // ????contributor ? -> ???? id???????QQ/????????????
         const canonicalUserId = (raw: string): string => {
             const s = String(raw).trim();
             if (!s) return '';
@@ -229,7 +233,7 @@ export async function generateRelationGraph(
         };
 
         (chatData.messages || []).forEach((m: any) => {
-            const topicLabel = String(m.topic || '未命名').trim().slice(0, 10);
+            const topicLabel = String(m.topic || '???').trim().slice(0, 10);
             const topicId = `topic:${topicLabel}`;
 
             if (!nodeSet.has(topicId)) {
@@ -263,35 +267,43 @@ export async function generateRelationGraph(
         const userCount = nodes.filter(n => n.type === 'user').length;
         const topicCount = nodes.filter(n => n.type === 'topic').length;
 
-        if (userCount === 0) throw new Error("未发现 contributors");
+        if (userCount === 0) throw new Error("??? contributors");
 
         const posMap = computeLayout(nodes, edges);
 
-        // 日志：每个用户连向的话题及连线坐标
+        // ???????????????????????????????
+        const topicInDegree: Record<string, number> = {};
+        edges.forEach(e => {
+            if (!topicInDegree[e.target]) topicInDegree[e.target] = 0;
+            topicInDegree[e.target]++;
+        });
+        const maxInDegree = Math.max(...Object.values(topicInDegree), 1);
+
+        // ?????????????????
         const userToTopics = new Map<string, string[]>();
         edges.forEach(e => {
             const list = userToTopics.get(e.source) || [];
             if (!list.includes(e.target)) list.push(e.target);
             userToTopics.set(e.source, list);
         });
-        // console.log('\n--- 用户 → 话题 连线 ---');
+        // console.log('\n--- ?? ? ?? ?? ---');
         nodes.filter(n => n.type === 'user').forEach(u => {
             const topics = userToTopics.get(u.id) || [];
-            // console.log(`用户 [${u.id}] → 话题: ${topics.join(', ') || '(无)'}`);
+            // console.log(`?? [${u.id}] ? ??: ${topics.join(', ') || '(?)'}`);
         });
-        // console.log('\n--- 连线坐标 (起点=用户圆心, 终点=话题菱形中心) ---');
+        // console.log('\n--- ???? (??=????, ??=??????) ---');
         edges.forEach((e, i) => {
             const s = posMap[e.source];
             const t = posMap[e.target];
             if (!s || !t) {
-                // console.log(`  [${i}] ${e.source} → ${e.target}: 缺少坐标 (source=${!!s}, target=${!!t})`);
+                // console.log(`  [${i}] ${e.source} ? ${e.target}: ???? (source=${!!s}, target=${!!t})`);
                 return;
             }
             const sx = s.x - GRAPH_LEFT;
             const sy = s.y - GRAPH_TOP;
             const tx = t.x - GRAPH_LEFT;
             const ty = t.y - GRAPH_TOP;
-            // console.log(`  [${i}] ${e.source} → ${e.target}: 起点(${sx.toFixed(1)}, ${sy.toFixed(1)}) 终点(${tx.toFixed(1)}, ${ty.toFixed(1)})`);
+            // console.log(`  [${i}] ${e.source} ? ${e.target}: ??(${sx.toFixed(1)}, ${sy.toFixed(1)}) ??(${tx.toFixed(1)}, ${ty.toFixed(1)})`);
         });
         const date = new Date();
         const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -308,7 +320,7 @@ export async function generateRelationGraph(
                 padding: '60px',
                 position: 'relative',
             }}>
-                {/* 顶部标题区 */}
+                {/* ????? */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -344,7 +356,7 @@ export async function generateRelationGraph(
                                 color: COLORS.muted,
                                 letterSpacing: '2px',
                             }}>
-                                群聊话题总结 SUMMARY
+                                ?????? SUMMARY
                             </div>
                             <div style={{
                                 display: 'flex',
@@ -370,7 +382,7 @@ export async function generateRelationGraph(
                     </svg>
                 </div>
 
-                {/* 主视觉区（与上下分隔线留出间距） */}
+                {/* ???????????????? */}
                 <div style={{
                     display: 'flex',
                     flex: 1,
@@ -378,226 +390,223 @@ export async function generateRelationGraph(
                     marginTop: '18px',
                     marginBottom: '28px',
                 }}>
-                    {/* 图区域容器：加 RENDER_PADDING 避免贴边连线被裁剪，起点终点逻辑不变 */}
+                    {/* ???????? SVG + viewBox ?????????????????? */}
                     <div style={{
                         position: 'absolute',
-                        left: GRAPH_OFFSET_X - RENDER_PADDING,
-                        top: GRAPH_OFFSET_Y - RENDER_PADDING,
-                        width: WIDTH - PADDING * 2 - 120 + RENDER_PADDING * 2,
-                        height: HEIGHT - 340 - GRAPH_TOP + RENDER_PADDING * 2,
+                        left: GRAPH_OFFSET_X,
+                        top: GRAPH_OFFSET_Y,
+                        width: GRAPH_WIDTH,
+                        height: GRAPH_HEIGHT,
                         display: 'flex',
                     }}>
-                        {/* 极简网格背景 */}
-                        <svg style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                        }}>
+                        <svg
+                            viewBox={`0 0 ${GRAPH_WIDTH} ${GRAPH_HEIGHT}`}
+                            width={GRAPH_WIDTH}
+                            height={GRAPH_HEIGHT}
+                            preserveAspectRatio="xMidYMid meet"
+                            style={{ display: 'block', flexShrink: 0 }}
+                        >
                             <defs>
                                 <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
                                     <path d="M 40 0 L 0 0 0 40" fill="none" stroke={COLORS.subtle} strokeWidth="0.5" />
                                 </pattern>
-                            </defs>
-                            <rect width="100%" height="100%" fill="url(#grid)" opacity="0.3" />
-                        </svg>
-
-                        {/* 连线层（置于节点之下）：圆心→菱形中心，透明度渐变；overflow:visible 避免贴边描边被裁剪 */}
-                        <svg style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            overflow: 'visible',
-                        }}>
-                            <defs>
+                                <clipPath id="avatarClip" clipPathUnits="objectBoundingBox">
+                                    <circle cx="0.5" cy="0.5" r="0.5" />
+                                </clipPath>
                                 {edges.map((e, i) => {
                                     const s = posMap[e.source];
                                     const t = posMap[e.target];
                                     if (!s || !t) return null;
-                                    const sx = s.x - GRAPH_LEFT + RENDER_PADDING;
-                                    const sy = s.y - GRAPH_TOP + RENDER_PADDING;
-                                    const tx = t.x - GRAPH_LEFT + RENDER_PADDING;
-                                    const ty = t.y - GRAPH_TOP + RENDER_PADDING;
+                                    const sx = Math.round(s.x - GRAPH_LEFT);
+                                    const sy = Math.round(s.y - GRAPH_TOP);
+                                    const tx = Math.round(t.x - GRAPH_LEFT);
+                                    const ty = Math.round(t.y - GRAPH_TOP);
+                                    // ??????????????????????0.15-0.9 ???
+                                    const inDegree = topicInDegree[e.target] || 0;
+                                    const opacity = 0.15 + (inDegree / maxInDegree) * 0.75;
                                     return (
                                         <linearGradient key={`grad-${i}`} id={`lineGrad-${i}`} x1={sx} y1={sy} x2={tx} y2={ty} gradientUnits="userSpaceOnUse">
-                                            <stop offset="0%" stopColor={COLORS.line} stopOpacity="1" />
-                                            <stop offset="100%" stopColor={COLORS.line} stopOpacity="0.25" />
+                                            <stop offset="0%" stopColor={COLORS.line} stopOpacity={opacity * 0.3} />
+                                            <stop offset="100%" stopColor={COLORS.line} stopOpacity={opacity} />
                                         </linearGradient>
                                     );
                                 })}
                             </defs>
+                            {/* ???? */}
+                            <rect width={GRAPH_WIDTH} height={GRAPH_HEIGHT} fill="url(#grid)" opacity="0.3" />
+
+                            {/* ????? - ????????? */}
+                            <g opacity="0.32">
+                                <defs>
+                                    <filter id="blurHeavy" x="-100%" y="-100%" width="300%" height="300%">
+                                        <feGaussianBlur stdDeviation="90" />
+                                    </filter>
+                                    <radialGradient id="glowGreen1" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stopColor="#4ade80" stopOpacity="0.8" />
+                                        <stop offset="35%" stopColor="#22c55e" stopOpacity="0.28" />
+                                        <stop offset="100%" stopColor="#0A0A0B" stopOpacity="0" />
+                                    </radialGradient>
+                                    <radialGradient id="glowGreen2" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" stopColor="#86efac" stopOpacity="0.8" />
+                                        <stop offset="40%" stopColor="#4ade80" stopOpacity="0.22" />
+                                        <stop offset="100%" stopColor="#0A0A0B" stopOpacity="0" />
+                                    </radialGradient>
+                                </defs>
+
+                                {/* ??? - ?????? */}
+                                <circle cx={GRAPH_WIDTH * 0.22} cy={GRAPH_HEIGHT * 0.35} r={GRAPH_WIDTH * 0.18} fill="url(#glowGreen1)" filter="url(#blurHeavy)" />
+
+                                {/* ??? - ?????? */}
+                                <circle cx={GRAPH_WIDTH * 0.78} cy={GRAPH_HEIGHT * 0.65} r={GRAPH_WIDTH * 0.2} fill="url(#glowGreen2)" filter="url(#blurHeavy)" />
+                            </g>
+
+                            {/* ?????????????0.8px - 2.2px?????????? */}
                             {edges.map((e, i) => {
                                 const s = posMap[e.source];
                                 const t = posMap[e.target];
                                 if (!s || !t) return null;
-
-                                const sx = s.x - GRAPH_LEFT + RENDER_PADDING;
-                                const sy = s.y - GRAPH_TOP + RENDER_PADDING;
-                                const tx = t.x - GRAPH_LEFT + RENDER_PADDING;
-                                const ty = t.y - GRAPH_TOP + RENDER_PADDING;
-
+                                const sx = Math.round(s.x - GRAPH_LEFT);
+                                const sy = Math.round(s.y - GRAPH_TOP);
+                                const tx = Math.round(t.x - GRAPH_LEFT);
+                                const ty = Math.round(t.y - GRAPH_TOP);
                                 const dx = tx - sx;
                                 const dy = ty - sy;
-                                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-
-                                // 起点：用户圆几何中心；终点：话题菱形几何中心（整体平移 RENDER_PADDING 避免裁剪）
-                                const startX = sx;
-                                const startY = sy;
-                                const endX = tx;
-                                const endY = ty;
-
                                 const curveStrength = 0.04;
-                                const mx = (startX + endX) / 2;
-                                const my = (startY + endY) / 2;
-                                const offsetX = -dy * curveStrength;
-                                const offsetY = dx * curveStrength;
-                                const cx = mx + offsetX;
-                                const cy = my + offsetY;
-
+                                const mx = (sx + tx) / 2;
+                                const my = (sy + ty) / 2;
+                                const cx = mx - dy * curveStrength;
+                                const cy = my + dx * curveStrength;
+                                const inDegree = topicInDegree[e.target] || 0;
+                                const strokeWidth = 0.8 + (inDegree / maxInDegree) * 1.4;
                                 return (
-                                    <path
-                                        key={i}
-                                        d={`M ${startX} ${startY} Q ${cx} ${cy} ${endX} ${endY}`}
-                                        fill="none"
-                                        stroke={`url(#lineGrad-${i})`}
-                                        strokeWidth="1.5"
-                                    />
+                                    <g key={i}>
+                                        <path
+                                            d={`M ${sx} ${sy} Q ${cx} ${cy} ${tx} ${ty}`}
+                                            fill="none"
+                                            stroke={`url(#lineGrad-${i})`}
+                                            strokeWidth={strokeWidth}
+                                        />
+                                    </g>
                                 );
                             })}
                         </svg>
-
-                        {/* 节点层（置于连线之上，DOM 顺序靠后故在上层） */}
+                        {/* ????? div+span?Satori ??? SVG text???????? SVG viewBox ???? */}
                         {nodes.map(node => {
                             const pos = posMap[node.id];
                             if (!pos) return null;
-                            const x = pos.x - GRAPH_LEFT + RENDER_PADDING;
-                            const y = pos.y - GRAPH_TOP + RENDER_PADDING;
-
-                        if (node.type === 'topic') {
-                            const size = TOPIC_DIAMOND_RADIUS * 2;
-                            const cx = TOPIC_DIAMOND_RADIUS;
-                            const cy = TOPIC_DIAMOND_RADIUS;
-                            const pts = `${cx},0 ${size},${cy} ${cx},${size} 0,${cy}`;
-                            return (
-                                <div
-                                    key={node.id}
-                                    style={{
-                                        position: 'absolute',
-                                        left: x - TOPIC_DIAMOND_RADIUS,
-                                        top: y - TOPIC_DIAMOND_RADIUS,
-                                        width: size,
-                                        height: size,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                >
-                                    <svg width={size} height={size} style={{ position: 'absolute', top: 0, left: 0 }}>
-                                        <polygon
-                                            points={pts}
-                                            fill={COLORS.bg}
-                                            stroke={COLORS.fg}
-                                            strokeWidth="1.5"
-                                        />
-                                    </svg>
-                                    <span style={{
-                                        position: 'relative',
-                                        display: 'flex',
-                                        fontSize: '18px',
-                                        fontWeight: 600,
-                                        color: COLORS.fg,
-                                        letterSpacing: '0.5px',
-                                        textAlign: 'center',
-                                        maxWidth: '100px',
-                                        wordBreak: 'break-word',
-                                        lineHeight: 1.3,
-                                        padding: '18px',
-                                    }}>
-                                        {node.label}
-                                    </span>
-                                </div>
-                            );
-                        } else {
-                            const avatarUrl = node.qq
-                                ? `https://q1.qlogo.cn/g?b=qq&nk=${node.qq}&s=640`
-                                : '';
-                            const hasAvatar = !!avatarUrl;
-                            const initial = node.id.charAt(0).toUpperCase();
-
-                            // 圆心在 (x, y)，头像 48x48 居中，故 left=x-24, top=y-24
-                            return (
-                                <div
-                                    key={node.id}
-                                    style={{
-                                        position: 'absolute',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        left: x - 24,
-                                        top: y - 24,
-                                        alignItems: 'center',
-                                        width: 48,
-                                    }}
-                                >
-                                    <div style={{
-                                        display: 'flex',
-                                        width: 48,
-                                        height: 48,
-                                        borderRadius: '50%',
-                                        border: `2px solid ${COLORS.fg}`,
-                                        backgroundColor: hasAvatar ? COLORS.bg : COLORS.subtle,
-                                        overflow: 'hidden',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}>
-                                        {hasAvatar ? (
-                                            <img
-                                                src={avatarUrl}
-                                                width={48}
-                                                height={48}
-                                                style={{ objectFit: 'cover' }}
+                            const x = pos.x - GRAPH_LEFT;
+                            const y = pos.y - GRAPH_TOP;
+                            const leftPct = ((x / GRAPH_WIDTH) * 100).toFixed(4) + '%';
+                            const topPct = ((y / GRAPH_HEIGHT) * 100).toFixed(4) + '%';
+                            if (node.type === 'topic') {
+                                const size = TOPIC_DIAMOND_RADIUS * 2;
+                                const half = TOPIC_DIAMOND_RADIUS;
+                                const leftPctTopic = (((x - half) / GRAPH_WIDTH) * 100).toFixed(4) + '%';
+                                const topPctTopic = (((y - half) / GRAPH_HEIGHT) * 100).toFixed(4) + '%';
+                                const wPct = ((size / GRAPH_WIDTH) * 100).toFixed(4) + '%';
+                                const hPct = ((size / GRAPH_HEIGHT) * 100).toFixed(4) + '%';
+                                const cx = half;
+                                const cy = half;
+                                const pts = `${cx},0 ${size},${cy} ${cx},${size} 0,${cy}`;
+                                return (
+                                    <div
+                                        key={node.id}
+                                        style={{
+                                            position: 'absolute',
+                                            left: leftPctTopic,
+                                            top: topPctTopic,
+                                            width: wPct,
+                                            height: hPct,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                        }}
+                                    >
+                                        <svg
+                                            width="100%"
+                                            height="100%"
+                                            style={{ position: 'absolute', top: 0, left: 0 }}
+                                            preserveAspectRatio="xMidYMid meet"
+                                            viewBox={`0 0 ${size} ${size}`}
+                                        >
+                                            <polygon
+                                                points={pts}
+                                                fill={COLORS.bg}
+                                                stroke={COLORS.line}
+                                                strokeWidth="1"
                                             />
-                                        ) : (
-                                            <span style={{
-                                                display: 'flex',
-                                                fontSize: '22px',
-                                                fontWeight: 700,
-                                                color: COLORS.fg,
-                                            }}>
-                                                {initial}
-                                            </span>
-                                        )}
+                                        </svg>
+                                        <span style={{
+                                            position: 'relative',
+                                            display: 'flex',
+                                            fontSize: '16px',
+                                            fontWeight: 500,
+                                            color: COLORS.fg,
+                                            textAlign: 'center',
+                                            maxWidth: '88px',
+                                            wordBreak: 'break-word',
+                                            lineHeight: 1.3,
+                                            letterSpacing: '0.5px',
+                                        }}>
+                                            {node.label}
+                                        </span>
                                     </div>
-
-                                    <div style={{
-                                        display: 'flex',
-                                        marginTop: '6px',
-                                        fontSize: '12px',
-                                        color: COLORS.muted,
-                                        textAlign: 'center',
-                                        maxWidth: '70px',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        letterSpacing: '0.5px',
-                                    }}>
-                                        {node.id}
+                                );
+                            } else {
+                                const avatarUrl = node.qq ? `https://q1.qlogo.cn/g?b=qq&nk=${node.qq}&s=640` : '';
+                                const hasAvatar = !!avatarUrl;
+                                const initial = node.id.charAt(0).toUpperCase();
+                                const leftPctUser = (((x - USER_NODE_RADIUS) / GRAPH_WIDTH) * 100).toFixed(4) + '%';
+                                const topPctUser = (((y - USER_NODE_RADIUS) / GRAPH_HEIGHT) * 100).toFixed(4) + '%';
+                                const sizePctW = ((48 / GRAPH_WIDTH) * 100).toFixed(4) + '%';
+                                const sizePctH = ((48 / GRAPH_HEIGHT) * 100).toFixed(4) + '%';
+                                return (
+                                    <div
+                                        key={node.id}
+                                        style={{
+                                            position: 'absolute',
+                                            left: leftPctUser,
+                                            top: topPctUser,
+                                            width: sizePctW,
+                                            height: sizePctH,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            borderRadius: '50%',
+                                            border: `2px solid ${COLORS.fg}`,
+                                            backgroundColor: hasAvatar ? COLORS.bg : COLORS.subtle,
+                                            overflow: 'hidden',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            display: 'flex',
+                                        }}>
+                                            {hasAvatar ? (
+                                                <img src={avatarUrl} width={48} height={48} style={{ objectFit: 'cover' }} />
+                                            ) : (
+                                                <span style={{ display: 'flex', fontSize: '22px', fontWeight: 700, color: COLORS.fg }}>{initial}</span>
+                                            )}
+                                        </div>
+                                        <span style={{ marginTop: '6px', fontSize: '12px', color: COLORS.muted, textAlign: 'center', maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {node.id}
+                                        </span>
                                     </div>
-                                </div>
-                            );
-                        }
+                                );
+                            }
                         })}
                     </div>
                 </div>
 
-                {/* 几何装饰 */}
+                {/* ???? */}
                 <div style={{ display: 'flex', marginBottom: '20px' }}>
                     <QuarterCirclePattern />
                 </div>
 
-                {/* 底部信息栏 */}
+                {/* ????? */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -619,7 +628,7 @@ export async function generateRelationGraph(
                         justifyContent: 'space-between',
                         alignItems: 'flex-start',
                     }}>
-                        {/* 左侧统计 */}
+                        {/* ???? */}
                         <div style={{
                             display: 'flex',
                             flexDirection: 'column',
@@ -745,7 +754,7 @@ export async function generateRelationGraph(
                                     color: COLORS.muted,
                                     letterSpacing: '0.5px',
                                 }}>
-                                    DESIGNER 锦恢
+                                    DESIGNER ??
                                 </span>
                             </div>
 
@@ -758,7 +767,7 @@ export async function generateRelationGraph(
                             }} />
                         </div>
 
-                        {/* 右侧品牌 */}
+                        {/* ???? */}
                         <div style={{
                             display: 'flex',
                             flexDirection: 'column',
@@ -789,7 +798,7 @@ export async function generateRelationGraph(
                                 letterSpacing: '0.5px',
                                 marginTop: '4px',
                             }}>
-                                © {date.getFullYear()} 锦恢
+                                ? {date.getFullYear()} ??
                             </div>
                         </div>
                     </div>
@@ -807,19 +816,19 @@ export async function generateRelationGraph(
 
         const resvg = new Resvg(svg, {
             background: COLORS.bg,
-            fitTo: { mode: 'width', value: WIDTH },
+            // ????? Satori ????????? fitTo ???????
         });
 
         writeFileSync(outputPath, resvg.render().asPng());
-        console.log(`✅ 已生成: ${path.resolve(outputPath)}`);
+        console.log(`? ???: ${path.resolve(outputPath)}`);
 
     } catch (err) {
-        console.error('❌ 生成失败:', err);
+        console.error('? ????:', err);
         throw err;
     }
 }
 
-// --- 直接执行时运行（被 import 时不执行）---
+// --- ????????? import ?????---
 const CHAT_JSON = path.join(TIPHARETH_ROOT, "report", "summarize_chat.json");
 const USER_JSON = path.join(TIPHARETH_ROOT, "report", "summarize_user.json");
 const OUTPUT_PNG = path.join(TIPHARETH_ROOT, "message-summary-og.png");
@@ -827,7 +836,7 @@ const OUTPUT_PNG = path.join(TIPHARETH_ROOT, "message-summary-og.png");
 const _currentFile = path.resolve(fileURLToPath(import.meta.url));
 if (process.argv[1] && path.resolve(process.argv[1]) === _currentFile) {
     if (!existsSync(CHAT_JSON) || !existsSync(USER_JSON)) {
-        console.error("❌ 请先运行 gen-summarize-json 或 message-summary 脚本");
+        console.error("? ???? gen-summarize-json ? message-summary ??");
         process.exit(1);
     }
     generateRelationGraph(CHAT_JSON, USER_JSON, OUTPUT_PNG).catch((err) => {
