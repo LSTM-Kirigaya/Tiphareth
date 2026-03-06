@@ -344,7 +344,7 @@ export async function generateRelationGraph(
                                 color: COLORS.muted,
                                 letterSpacing: '2px',
                             }}>
-                                ANZULEAF RELATION MAP
+                                群聊话题总结 SUMMARY
                             </div>
                             <div style={{
                                 display: 'flex',
@@ -353,18 +353,21 @@ export async function generateRelationGraph(
                                 letterSpacing: '1px',
                                 marginTop: '4px',
                             }}>
-                                群聊话题总结
+                                FACE THE FEAR, CREATE THE FUTURE
                             </div>
                         </div>
                     </div>
 
-                    <div style={{
-                        display: 'flex',
-                        width: '100%',
-                        height: '2px',
-                        backgroundColor: COLORS.fg,
-                        marginTop: '20px',
-                    }} />
+                    <svg style={{ width: '100%', height: 2, display: 'block', marginTop: '20px' }}>
+                        <defs>
+                            <linearGradient id="lineGradTop" x1="0%" y1="0" x2="100%" y2="0">
+                                <stop offset="0%" stopColor={COLORS.fg} stopOpacity="0" />
+                                <stop offset="50%" stopColor={COLORS.fg} stopOpacity="1" />
+                                <stop offset="100%" stopColor={COLORS.fg} stopOpacity="0" />
+                            </linearGradient>
+                        </defs>
+                        <rect x="0" y="0" width="100%" height="2" fill="url(#lineGradTop)" />
+                    </svg>
                 </div>
 
                 {/* 主视觉区（与上下分隔线留出间距） */}
@@ -599,13 +602,16 @@ export async function generateRelationGraph(
                     display: 'flex',
                     flexDirection: 'column',
                 }}>
-                    <div style={{
-                        display: 'flex',
-                        width: '100%',
-                        height: '2px',
-                        backgroundColor: COLORS.fg,
-                        marginBottom: '24px',
-                    }} />
+                    <svg style={{ width: '100%', height: 2, display: 'block', marginBottom: '24px' }}>
+                        <defs>
+                            <linearGradient id="lineGradBottom" x1="0%" y1="0" x2="100%" y2="0">
+                                <stop offset="0%" stopColor={COLORS.fg} stopOpacity="0" />
+                                <stop offset="50%" stopColor={COLORS.fg} stopOpacity="1" />
+                                <stop offset="100%" stopColor={COLORS.fg} stopOpacity="0" />
+                            </linearGradient>
+                        </defs>
+                        <rect x="0" y="0" width="100%" height="2" fill="url(#lineGradBottom)" />
+                    </svg>
 
                     <div style={{
                         display: 'flex',
@@ -739,7 +745,7 @@ export async function generateRelationGraph(
                                     color: COLORS.muted,
                                     letterSpacing: '0.5px',
                                 }}>
-                                    kirigaya.cn
+                                    DESIGNER 锦恢
                                 </span>
                             </div>
 
@@ -814,8 +820,8 @@ export async function generateRelationGraph(
 }
 
 // --- 直接执行时运行（被 import 时不执行）---
-const CHAT_JSON = path.join(TIPHARETH_ROOT, "report", "src", "summarize_chat.json");
-const USER_JSON = path.join(TIPHARETH_ROOT, "report", "src", "summarize_user.json");
+const CHAT_JSON = path.join(TIPHARETH_ROOT, "report", "summarize_chat.json");
+const USER_JSON = path.join(TIPHARETH_ROOT, "report", "summarize_user.json");
 const OUTPUT_PNG = path.join(TIPHARETH_ROOT, "message-summary-og.png");
 
 const _currentFile = path.resolve(fileURLToPath(import.meta.url));

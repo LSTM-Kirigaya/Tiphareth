@@ -153,7 +153,7 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
                                 lineHeight: '1.6',
                                 textAlign: 'right',
                             }}>
-                                AI & CS 技术分享 · 精选阅读
+                                AI & CS 技术分享 · DAILY SHARE
                             </div>
                             <div style={{
                                 display: 'flex',
@@ -162,7 +162,7 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
                                 letterSpacing: '0.5px',
                                 marginTop: '6px',
                             }}>
-                                ANZULEAF DAILY SHARE
+                                FACE THE FEAR, CREATE THE FUTURE
                             </div>
                         </div>
                     </div>
@@ -263,7 +263,7 @@ export async function generatePremiumCard(data: NewsItem[]): Promise<string | nu
                                 <span style={{ display: 'flex', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#CCCCCC', marginTop: '6px' }} />
                                 <span style={{ display: 'flex', fontSize: '12px', color: '#666666', letterSpacing: '4px', fontWeight: 600 }}>Raspberry Pi 5</span>
                                 <span style={{ display: 'flex', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#CCCCCC', marginTop: '6px' }} />
-                                <span style={{ display: 'flex', fontSize: '11px', color: '#AAAAAA', letterSpacing: '1px' }}>DESIGNED BY 锦恢</span>
+                                <span style={{ display: 'flex', fontSize: '11px', color: '#AAAAAA', letterSpacing: '1px' }}>DESIGNER 锦恢</span>
                             </div>
                             <div style={{ display: 'flex', width: '24px', height: '3px', backgroundColor: '#000000', marginTop: '12px' }} />
                         </div>
