@@ -8,13 +8,13 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TIPHARETH_ROOT = path.resolve(__dirname, '../..');
 
-// --- ?????? (????) ---
+// --- 主题色配置 (强制黑白) ---
 const COLORS = {
     bg: '#0A0A0B',
     fg: '#FFFFFF',
     muted: '#666666',
     subtle: '#333333',
-    line: '#888888',  // ?????? subtle ?????????
+    line: '#888888',  // 比 subtle 更明显的线条颜色，用于连接线和边框
     accent: '#FFFFFF',
 };
 
@@ -22,20 +22,20 @@ const WIDTH = 1600;
 const HEIGHT = 1200;
 const PADDING = 80;
 
-// ????? computeLayout ????????????
+// 注意：computeLayout 使用的坐标是全局的
 const GRAPH_LEFT = PADDING + 60;
 const GRAPH_TOP = 200;
-// ????????????????
+// 布局坐标需要转换为局部坐标
 const GRAPH_OFFSET_X = GRAPH_LEFT - 60;
-const GRAPH_OFFSET_Y = 24;  // ??????????????????
-// ?????? computeLayout ???????? SVG viewBox????????????
+const GRAPH_OFFSET_Y = 24;  // 垂直偏移量，用于修正节点显示位置
+// 注意：computeLayout 返回的是全局坐标，SVG viewBox 使用局部坐标，需要平移
 const GRAPH_WIDTH = WIDTH - PADDING * 2 - 120;
 const GRAPH_HEIGHT = HEIGHT - 340 - GRAPH_TOP;
 
-// ??????????????????????????? true ??????
+// 调试用：显示连接线端点，设为 true 时显示
 const DEBUG_LINE_ENDPOINTS = false;
 
-// --- ???????? ---
+// --- 四分之一圆形图案组件 ---
 const QuarterCirclePattern = () => (
     <div style={{
         display: 'flex',
@@ -75,11 +75,11 @@ const QuarterCirclePattern = () => (
     </div>
 );
 
-// ???????????????????????????
+// 节点半径：用户节点和话题菱形的大小
 const USER_NODE_RADIUS = 24;
-const TOPIC_DIAMOND_RADIUS = 54;  // ????????
+const TOPIC_DIAMOND_RADIUS = 54;  // 话题菱形半径
 
-// ????????????????????
+// 伪随机数生成器，用于布局初始化
 function seededRandom(seed: number) {
     return function () {
         seed = (seed * 9301 + 49297) % 233280;
@@ -87,14 +87,14 @@ function seededRandom(seed: number) {
     };
 }
 
-// --- Force Directed Layout??????? ---
+// --- Force Directed Layout力导向布局算法 ---
 function computeLayout(nodes: any[], edges: any[]) {
     const positions: Record<string, { x: number; y: number }> = {};
 
     if (nodes.length === 0) return positions;
 
     const graphTop = GRAPH_TOP;
-    const graphBottom = HEIGHT - 340;  // ???????????
+    const graphBottom = HEIGHT - 340;  // 底部留出空间给统计信息
     const graphLeft = GRAPH_LEFT;
     const graphRight = WIDTH - PADDING - 60;
 
@@ -124,7 +124,7 @@ function computeLayout(nodes: any[], edges: any[]) {
             disp[v.id] = { x: 0, y: 0 };
         });
 
-        // --- ?? ---
+        // --- 斥力 ---
         for (let i = 0; i < nodes.length; i++) {
             for (let j = i + 1; j < nodes.length; j++) {
                 const v = nodes[i];
@@ -146,7 +146,7 @@ function computeLayout(nodes: any[], edges: any[]) {
             }
         }
 
-        // --- ??????---
+        // --- 引力（边约束）---
         edges.forEach(e => {
             const v = e.source;
             const u = e.target;
@@ -168,7 +168,7 @@ function computeLayout(nodes: any[], edges: any[]) {
             disp[u].y += fy;
         });
 
-        // --- ???? ---
+        // --- 更新位置 ---
         nodes.forEach(v => {
             const dx = disp[v.id].x;
             const dy = disp[v.id].y;
@@ -178,7 +178,7 @@ function computeLayout(nodes: any[], edges: any[]) {
             positions[v.id].x += (dx / dist) * Math.min(dist, temperature);
             positions[v.id].y += (dy / dist) * Math.min(dist, temperature);
 
-            // ????
+            // 边界限制
             positions[v.id].x = Math.min(graphRight, Math.max(graphLeft, positions[v.id].x));
             positions[v.id].y = Math.min(graphBottom, Math.max(graphTop, positions[v.id].y));
         });
@@ -200,7 +200,7 @@ export async function generateRelationGraph(
             : path.join(TIPHARETH_ROOT, userJsonPath);
 
         if (!existsSync(chatPath) || !existsSync(userPath)) {
-            throw new Error(`???????`);
+            throw new Error(`找不到输入文件`);
         }
 
         const chatData = JSON.parse(readFileSync(chatPath, 'utf-8'));
@@ -209,7 +209,7 @@ export async function generateRelationGraph(
         const fontPath = path.join(TIPHARETH_ROOT, 'assets', 'fonts', 'NotoSansSC-Regular.ttf');
         const fontBoldPath = path.join(TIPHARETH_ROOT, 'assets', 'fonts', 'NotoSansSC-Bold.ttf');
 
-        if (!existsSync(fontPath)) throw new Error(`?????: ${fontPath}`);
+        if (!existsSync(fontPath)) throw new Error(`字体文件不存在: ${fontPath}`);
 
         const fontData = readFileSync(fontPath);
         const fontBold = existsSync(fontBoldPath) ? readFileSync(fontBoldPath) : fontData;
@@ -224,7 +224,7 @@ export async function generateRelationGraph(
             if (t?.qq) userMetaMap.set(String(t.qq), t);
         });
 
-        // ????contributor ? -> ???? id???????QQ/????????????
+        // 规范化 contributor 名称 -> 返回统一 id：优先使用用户名，其次是QQ/名称的字符串形式
         const canonicalUserId = (raw: string): string => {
             const s = String(raw).trim();
             if (!s) return '';
@@ -233,7 +233,7 @@ export async function generateRelationGraph(
         };
 
         (chatData.messages || []).forEach((m: any) => {
-            const topicLabel = String(m.topic || '???').trim().slice(0, 10);
+            const topicLabel = String(m.topic || '未知主题').trim().slice(0, 10);
             const topicId = `topic:${topicLabel}`;
 
             if (!nodeSet.has(topicId)) {
@@ -267,11 +267,11 @@ export async function generateRelationGraph(
         const userCount = nodes.filter(n => n.type === 'user').length;
         const topicCount = nodes.filter(n => n.type === 'topic').length;
 
-        if (userCount === 0) throw new Error("??? contributors");
+        if (userCount === 0) throw new Error("没有找到 contributors");
 
         const posMap = computeLayout(nodes, edges);
 
-        // ???????????????????????????????
+        // 统计每个话题的连接数（入度），用于计算线粗细和透明度
         const topicInDegree: Record<string, number> = {};
         edges.forEach(e => {
             if (!topicInDegree[e.target]) topicInDegree[e.target] = 0;
@@ -279,31 +279,31 @@ export async function generateRelationGraph(
         });
         const maxInDegree = Math.max(...Object.values(topicInDegree), 1);
 
-        // ?????????????????
+        // 统计每个用户连接的话题列表
         const userToTopics = new Map<string, string[]>();
         edges.forEach(e => {
             const list = userToTopics.get(e.source) || [];
             if (!list.includes(e.target)) list.push(e.target);
             userToTopics.set(e.source, list);
         });
-        // console.log('\n--- ?? ? ?? ?? ---');
+        // console.log('\n--- 用户与话题关系 ---');
         nodes.filter(n => n.type === 'user').forEach(u => {
             const topics = userToTopics.get(u.id) || [];
-            // console.log(`?? [${u.id}] ? ??: ${topics.join(', ') || '(?)'}`);
+            // console.log(`用户 [${u.id}] 的 话题: ${topics.join(', ') || '(无)'}`);
         });
-        // console.log('\n--- ???? (??=????, ??=??????) ---');
+        // console.log('\n--- 边坐标映射 (源=全局坐标, 目标=全局坐标) ---');
         edges.forEach((e, i) => {
             const s = posMap[e.source];
             const t = posMap[e.target];
             if (!s || !t) {
-                // console.log(`  [${i}] ${e.source} ? ${e.target}: ???? (source=${!!s}, target=${!!t})`);
+                // console.log(`  [${i}] ${e.source} -> ${e.target}: 位置缺失 (source=${!!s}, target=${!!t})`);
                 return;
             }
             const sx = s.x - GRAPH_LEFT;
             const sy = s.y - GRAPH_TOP;
             const tx = t.x - GRAPH_LEFT;
             const ty = t.y - GRAPH_TOP;
-            // console.log(`  [${i}] ${e.source} ? ${e.target}: ??(${sx.toFixed(1)}, ${sy.toFixed(1)}) ??(${tx.toFixed(1)}, ${ty.toFixed(1)})`);
+            // console.log(`  [${i}] ${e.source} -> ${e.target}: 源点(${sx.toFixed(1)}, ${sy.toFixed(1)}) 目标(${tx.toFixed(1)}, ${ty.toFixed(1)})`);
         });
         const date = new Date();
         const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -320,7 +320,7 @@ export async function generateRelationGraph(
                 padding: '60px',
                 position: 'relative',
             }}>
-                {/* ????? */}
+                {/* 顶部标题区域 */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -356,7 +356,7 @@ export async function generateRelationGraph(
                                 color: COLORS.muted,
                                 letterSpacing: '2px',
                             }}>
-                                ?????? SUMMARY
+                                群聊总结 SUMMARY
                             </div>
                             <div style={{
                                 display: 'flex',
@@ -382,7 +382,7 @@ export async function generateRelationGraph(
                     </svg>
                 </div>
 
-                {/* ???????????????? */}
+                {/* 图表区域：使用绝对定位容器包裹内部 SVG + viewBox 实现响应式缩放 */}
                 <div style={{
                     display: 'flex',
                     flex: 1,
@@ -390,7 +390,7 @@ export async function generateRelationGraph(
                     marginTop: '18px',
                     marginBottom: '28px',
                 }}>
-                    {/* ???????? SVG + viewBox ?????????????????? */}
+                    {/* 力导向图容器：内部使用 SVG + viewBox 实现缩放，外部用百分比定位 */}
                     <div style={{
                         position: 'absolute',
                         left: GRAPH_OFFSET_X,
@@ -421,21 +421,21 @@ export async function generateRelationGraph(
                                     const sy = Math.round(s.y - GRAPH_TOP);
                                     const tx = Math.round(t.x - GRAPH_LEFT);
                                     const ty = Math.round(t.y - GRAPH_TOP);
-                                    // ??????????????????????0.15-0.9 ???
+                                    // 根据话题热度（入度）计算透明度，范围在0.15-0.9 之间
                                     const inDegree = topicInDegree[e.target] || 0;
                                     const opacity = 0.15 + (inDegree / maxInDegree) * 0.75;
                                     return (
                                         <linearGradient key={`grad-${i}`} id={`lineGrad-${i}`} x1={sx} y1={sy} x2={tx} y2={ty} gradientUnits="userSpaceOnUse">
-                                            <stop offset="0%" stopColor={COLORS.line} stopOpacity={opacity * 0.3} />
-                                            <stop offset="100%" stopColor={COLORS.line} stopOpacity={opacity} />
+                                            <stop offset="0%" stopColor={COLORS.line} stopOpacity={opacity} />
+                                            <stop offset="100%" stopColor={COLORS.line} stopOpacity={opacity * 0.3} />
                                         </linearGradient>
                                     );
                                 })}
                             </defs>
-                            {/* ???? */}
+                            {/* 背景网格 */}
                             <rect width={GRAPH_WIDTH} height={GRAPH_HEIGHT} fill="url(#grid)" opacity="0.3" />
 
-                            {/* ????? - ????????? */}
+                            {/* 背景光晕 - 提升视觉层次 */}
                             <g opacity="0.32">
                                 <defs>
                                     <filter id="blurHeavy" x="-100%" y="-100%" width="300%" height="300%">
@@ -453,14 +453,14 @@ export async function generateRelationGraph(
                                     </radialGradient>
                                 </defs>
 
-                                {/* ??? - ?????? */}
+                                {/* 左光晕 - 区域左上 */}
                                 <circle cx={GRAPH_WIDTH * 0.22} cy={GRAPH_HEIGHT * 0.35} r={GRAPH_WIDTH * 0.18} fill="url(#glowGreen1)" filter="url(#blurHeavy)" />
 
-                                {/* ??? - ?????? */}
+                                {/* 右光晕 - 区域右下 */}
                                 <circle cx={GRAPH_WIDTH * 0.78} cy={GRAPH_HEIGHT * 0.65} r={GRAPH_WIDTH * 0.2} fill="url(#glowGreen2)" filter="url(#blurHeavy)" />
                             </g>
 
-                            {/* ?????????????0.8px - 2.2px?????????? */}
+                            {/* 边：粗细根据话题热度动态调整 0.8px - 2.2px，透明度也已设置 */}
                             {edges.map((e, i) => {
                                 const s = posMap[e.source];
                                 const t = posMap[e.target];
@@ -490,7 +490,6 @@ export async function generateRelationGraph(
                                 );
                             })}
                         </svg>
-                        {/* ????? div+span?Satori ??? SVG text???????? SVG viewBox ???? */}
                         {nodes.map(node => {
                             const pos = posMap[node.id];
                             if (!pos) return null;
@@ -601,12 +600,11 @@ export async function generateRelationGraph(
                     </div>
                 </div>
 
-                {/* ???? */}
                 <div style={{ display: 'flex', marginBottom: '20px' }}>
                     <QuarterCirclePattern />
                 </div>
 
-                {/* ????? */}
+                {/* 底部分隔装饰 */}
                 <div style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -628,7 +626,6 @@ export async function generateRelationGraph(
                         justifyContent: 'space-between',
                         alignItems: 'flex-start',
                     }}>
-                        {/* ???? */}
                         <div style={{
                             display: 'flex',
                             flexDirection: 'column',
@@ -754,7 +751,7 @@ export async function generateRelationGraph(
                                     color: COLORS.muted,
                                     letterSpacing: '0.5px',
                                 }}>
-                                    DESIGNER ??
+                                    DESIGNER 锦恢
                                 </span>
                             </div>
 
@@ -767,7 +764,7 @@ export async function generateRelationGraph(
                             }} />
                         </div>
 
-                        {/* ???? */}
+                        {/* 右侧品牌 */}
                         <div style={{
                             display: 'flex',
                             flexDirection: 'column',
@@ -798,7 +795,7 @@ export async function generateRelationGraph(
                                 letterSpacing: '0.5px',
                                 marginTop: '4px',
                             }}>
-                                ? {date.getFullYear()} ??
+                                © {date.getFullYear()} 版权所有
                             </div>
                         </div>
                     </div>
@@ -816,19 +813,19 @@ export async function generateRelationGraph(
 
         const resvg = new Resvg(svg, {
             background: COLORS.bg,
-            // ????? Satori ????????? fitTo ???????
+            // 注意：不需要设置 Satori 的缩放选项，因为我们已经手动计算了 viewBox
         });
 
         writeFileSync(outputPath, resvg.render().asPng());
-        console.log(`? ???: ${path.resolve(outputPath)}`);
+        console.log(`✓ 已生成: ${path.resolve(outputPath)}`);
 
     } catch (err) {
-        console.error('? ????:', err);
+        console.error('生成失败:', err);
         throw err;
     }
 }
 
-// --- ????????? import ?????---
+// --- 如果是直接运行（非 import）则自动执行 ---
 const CHAT_JSON = path.join(TIPHARETH_ROOT, "report", "summarize_chat.json");
 const USER_JSON = path.join(TIPHARETH_ROOT, "report", "summarize_user.json");
 const OUTPUT_PNG = path.join(TIPHARETH_ROOT, "message-summary-og.png");
@@ -836,7 +833,7 @@ const OUTPUT_PNG = path.join(TIPHARETH_ROOT, "message-summary-og.png");
 const _currentFile = path.resolve(fileURLToPath(import.meta.url));
 if (process.argv[1] && path.resolve(process.argv[1]) === _currentFile) {
     if (!existsSync(CHAT_JSON) || !existsSync(USER_JSON)) {
-        console.error("? ???? gen-summarize-json ? message-summary ??");
+        console.error("错误: 请先运行 gen-summarize-json 或 message-summary 生成数据");
         process.exit(1);
     }
     generateRelationGraph(CHAT_JSON, USER_JSON, OUTPUT_PNG).catch((err) => {
