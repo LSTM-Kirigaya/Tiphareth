@@ -22,8 +22,8 @@ export type WelcomeOGData = z.infer<typeof WelcomeOGSchema>;
 
 // 模拟数据
 const welcomeData: WelcomeOGData = {
-    memberName: "锦恢",
-    memberAvatar: "https://q1.qlogo.cn/g?b=qq&nk=1193466151&s=640",
+    memberName: "羊皮纸",
+    memberAvatar: "https://q1.qlogo.cn/g?b=qq&nk=3108424075&s=640",
     joinDate: "2026.02.28",
     groupName: "AnzuLeaf",
     resources: [
@@ -279,7 +279,8 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                                         width: '100%',
                                         height: '100%',
                                         objectFit: 'cover',
-                                        filter: 'grayscale(100%) contrast(1.1)',
+                                        // 去除黑白滤镜，保留头像原始颜色
+                                        filter: 'none',
                                     }}
                                 />
                             ) : (
@@ -486,7 +487,7 @@ export async function generateWelcomeOG(data: WelcomeOGData) {
                                 <span style={{ display: 'flex', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#CCCCCC', marginTop: '6px' }} />
                                 <span style={{ display: 'flex', fontSize: '13px', color: '#666666', letterSpacing: '4px', fontWeight: 600 }}>Raspberry Pi 5</span>
                                 <span style={{ display: 'flex', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#CCCCCC', marginTop: '6px' }} />
-                                <span style={{ display: 'flex', fontSize: '12px', color: '#AAAAAA', letterSpacing: '1px' }}>192.168.10.1</span>
+                                <span style={{ display: 'flex', fontSize: '12px', color: '#AAAAAA', letterSpacing: '1px' }}>DESIGNER 锦恢</span>
                             </div>
                             <div style={{
                                 display: 'flex',
