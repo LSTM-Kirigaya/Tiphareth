@@ -97,13 +97,13 @@ async function doSummary(
     lastHour: number,
     sendImage: (gid: number, imagePath: string) => Promise<void>
 ): Promise<string> {
-    const { getLastNHoursGroupMessages } = await import("../../utils/historyMessages.js");
+    const { getLast24HGroupMessages } = await import("../../utils/historyMessages.js");
 
     if (sendToGroups.length > 0) {
         console.log(`[send] target groups: ${sendToGroups.join(", ")}`);
     }
     console.log(`[fetch] group ${groupId} | last ${lastHour}h...`);
-    const rawJson = await getLastNHoursGroupMessages(context, groupId, lastHour);
+    const rawJson = await getLast24HGroupMessages(context, groupId);
     console.log(`   messages: ${rawJson.messageCount}, chars: ${rawJson.wordCount}`);
 
     if (rawJson.messageCount === 0) {

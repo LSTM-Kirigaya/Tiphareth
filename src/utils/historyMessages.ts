@@ -2,8 +2,8 @@ import * as path from 'path';
 import { GroupMessage, LagrangeContext, PrivateMessage } from 'lagrange.onebot';
 import { qqGroupSummaryPdf } from '../services/group-summary';
 import fs from 'fs';
-import { QueryMessageDto, UserInfo } from 'lagrange.onebot/util/realm.dto';
 import { GetMsgResponse } from 'lagrange.onebot/core/type';
+
 export async function exportTodayGroupMessagesPdf(
     c: LagrangeContext<GroupMessage | PrivateMessage>,
     sourceGroupId: number,
@@ -25,7 +25,7 @@ export async function exportTodayGroupMessagesPdf(
 
         await new Promise(resolve => setTimeout(resolve, 1500));
         await c.uploadGroupFile(targetGroupId, pdfPath, path.basename(pdfPath));
-    await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 1500));
         await c.sendGroupMsg(targetGroupId, [{
             type: 'image',
             data: {
@@ -38,104 +38,98 @@ export async function exportTodayGroupMessagesPdf(
 }
 
 /**
- * @description 获取过去 N 小时的消息
+ * @description 获取过去24小时的消息
  * @param context 
  * @param groupId 
- * @param hours 小时数，默认 24
  * @param chunkSize 
  * @param limit 
  * @returns 
  */
-export async function getLastNHoursGroupMessages(
+export async function getLast24HGroupMessages(
     context: LagrangeContext<any>,
     groupId: number,
-    hours = 24,
-    _chunkSize = 50,
-    _limit = 3000,
-): Promise<QueryMessageDto> {
+    chunkSize = 100,
+    limit = 3000,
+): Promise<any> {
+
     const now = Date.now() / 1000;
-    const startTime = now - hours * 60 * 60;
-    const fmt = (t: number) => new Date(t * 1000).toLocaleString("zh-CN", { timeZoneName: "short" });
+    const startTime = now - 24 * 60 * 60;
 
-    const INITIAL_FETCH = 1000;
-    const MAX_FETCH = 8000;
-    const CHUNK_SIZE = 500; // API 可能单次上限约 512，用 500 确保能稳定分页
+    let messageSeq: number | undefined = undefined;
 
-    console.log(`[getLastNHoursGroupMessages] 群 ${groupId} | 过去 ${hours}h | 倍增搜索 ${INITIAL_FETCH}~${MAX_FETCH}`);
-    console.log(`[getLastNHoursGroupMessages] 时间范围: ${fmt(startTime)} ~ ${fmt(now)}`);
+    const allMessages: GetMsgResponse[] = [];
+    const seenMessageIds = new Set<number>();
 
-    let fetchSize = INITIAL_FETCH;
-    let allMessages: GetMsgResponse[] = [];
-    let messageId: number | undefined = undefined;
+    let stopLoop = false;
+    let pageCount = 0;
 
-    while (allMessages.length < MAX_FETCH) {
-        const requestCount = Math.min(fetchSize, CHUNK_SIZE);
-        const res = await context.getGroupMsgHistory({
-            group_id: groupId,
-            message_id: messageId,
-            count: requestCount,
-        });
+    while (!stopLoop) {
+        pageCount++;
+        
+        // 使用新的 API 签名：(group_id, message_seq?, count?, reverse_order?)
+        // reverse_order = true 表示从旧到新返回，可以用 message_seq 向前翻页
+        const res = await context.getGroupMsgHistory(
+            groupId,
+            messageSeq,
+            chunkSize,
+            true
+        );
 
-        if (res instanceof Error || !res.data?.messages?.length) {
-            console.log(`[getLastNHoursGroupMessages] 请求 ${requestCount} 条: 无消息`);
+        if (res instanceof Error) {
+            console.log('[getLast24HGroupMessages] API 错误:', res.message);
+            break;
+        }
+        
+        if (!res.data?.messages?.length) {
+            console.log('[getLast24HGroupMessages] 无消息返回, seq=', messageSeq);
             break;
         }
 
-        const batch = res.data.messages;
+        const batchMessages = res.data.messages;
         const prevCount = allMessages.length;
-        const seenIds = new Set(allMessages.map((m) => m.message_id));
-        for (const msg of batch) {
-            if (!seenIds.has(msg.message_id)) {
+        
+        // 添加延迟避免频率限制
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        for (const msg of batchMessages) {
+            // 去重
+            if (seenMessageIds.has(msg.message_id)) {
+                continue;
+            }
+            seenMessageIds.add(msg.message_id);
+
+            // 超出时间范围 -> 停止
+            if (msg.time < startTime) {
+                stopLoop = true;
+            } else {
                 allMessages.push(msg);
-                seenIds.add(msg.message_id);
             }
         }
+        
         const added = allMessages.length - prevCount;
-        allMessages.sort((a, b) => a.time - b.time);
+        console.log(`[getLast24HGroupMessages] 第${pageCount}页: 新增${added}条, 累计${allMessages.length}条`);
 
-        // 分页游标：API 可能返回从新到旧(batch[last]最老)或从旧到新(batch[0]最老)，取时间戳最小的
-        const batchFirst = batch[0];
-        const batchLast = batch[batch.length - 1];
-        const batchOldest = (batchFirst?.time ?? 0) < (batchLast?.time ?? 0) ? batchFirst : batchLast;
-        const oldestTime = batchOldest?.time ?? 0;
-
-        console.log(`[getLastNHoursGroupMessages] 已拉取 ${allMessages.length} 条 (本批新增 ${added}), 本批最老: ${fmt(oldestTime)}`);
-
-        if (oldestTime < startTime) {
-            console.log(`[getLastNHoursGroupMessages] 最老消息已超过时间边界，停止`);
+        // 下一页：用最早的那条的 message_seq
+        const oldest = batchMessages[0];
+        const nextSeq = (oldest as any)?.message_seq ?? oldest?.message_id;
+        
+        // 防止死循环：如果 seq 没有变化，停止
+        if (!nextSeq || nextSeq === messageSeq) {
+            console.log('[getLast24HGroupMessages] 游标未变化，停止分页');
             break;
         }
+        messageSeq = nextSeq;
 
-        if (added === 0) {
-            console.log(`[getLastNHoursGroupMessages] 本批无新消息，已达历史尽头`);
+        if (allMessages.length >= limit) {
+            console.log('[getLast24HGroupMessages] 达到上限，停止');
             break;
         }
-
-        messageId = batchOldest?.message_id;
-        if (!messageId) {
-            console.log(`[getLastNHoursGroupMessages] 无法获取下一页 message_id`);
-            break;
-        }
-
-        fetchSize = Math.min(fetchSize * 2, MAX_FETCH);
     }
 
-    if (allMessages.length >= MAX_FETCH) {
-        console.log(`[getLastNHoursGroupMessages] 累计已拉取 ${MAX_FETCH} 条，达上限`);
-    }
+    console.log(`[getLast24HGroupMessages] 共获取 ${allMessages.length} 条消息`);
 
-    allMessages = allMessages.filter((m) => m.time >= startTime);
-    allMessages.sort((a, b) => a.time - b.time);
-
-    const actualStart = allMessages[0]?.time;
-    const actualEnd = allMessages[allMessages.length - 1]?.time;
-    const rangeStr = allMessages.length > 0
-        ? `${fmt(actualStart!)} ~ ${fmt(actualEnd!)}`
-        : "无";
-    console.log(`[getLastNHoursGroupMessages] 拉取完成: 共 ${allMessages.length} 条在时间范围内，实际消息时间: ${rangeStr}`);
-
-    const userMap: Record<number, UserInfo> = {};
-    const queryMessageDto: QueryMessageDto = {
+    const userMap: Record<number, any> = {};
+    const queryMessageDto: any = {
         groupId,
         exportTime: new Date().toISOString(),
         messageCount: 0,
@@ -147,9 +141,6 @@ export async function getLastNHoursGroupMessages(
     if (!(groupInfo instanceof Error)) {
         queryMessageDto.groupName = groupInfo.data?.group_name;
         queryMessageDto.memberCount = groupInfo.data?.member_count;
-        console.log(`[getLastNHoursGroupMessages] 群信息: ${groupInfo.data?.group_name ?? "?"} (成员 ${groupInfo.data?.member_count ?? "?"})`);
-    } else {
-        console.log(`[getLastNHoursGroupMessages] 获取群信息失败`);
     }
 
     let messageCount = 0;
@@ -204,18 +195,8 @@ export async function getLastNHoursGroupMessages(
     queryMessageDto.messageCount = messageCount;
     queryMessageDto.wordCount = wordCount;
 
-    const userCount = Object.keys(userMap).length;
-    console.log(`[getLastNHoursGroupMessages] 完成: 有效消息 ${messageCount} 条, 字数 ${wordCount}, 参与用户 ${userCount}`);
+    console.log('message Count', messageCount);
+    console.log('word Count', wordCount);
 
     return queryMessageDto;
-}
-
-/** @description 获取过去 24 小时的消息（兼容旧调用） */
-export async function getLast24HGroupMessages(
-    context: LagrangeContext<any>,
-    groupId: number,
-    chunkSize = 50,
-    limit = 3000,
-): Promise<QueryMessageDto> {
-    return getLastNHoursGroupMessages(context, groupId, 24, chunkSize, limit);
 }
