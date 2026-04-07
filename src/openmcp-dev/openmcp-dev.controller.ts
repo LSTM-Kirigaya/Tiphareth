@@ -96,7 +96,8 @@ export class OpenMcpChannel {
         }
     }
 
-    @mapper.createTimeSchedule('0 0 10 * * *')
+    /** 每日科技新闻 — 与 src/openclaw/cron/daily-news.ts / openclaw cron「0 8 * * *」Asia/Shanghai 一致 */
+    @mapper.createTimeSchedule('0 0 8 * * *')
     async publishNewsTimer(c: LagrangeContext<Message>) {
         const imagePath = await getNewsFromHackNews();
         if (imagePath) {
@@ -109,7 +110,8 @@ export class OpenMcpChannel {
         }
     }
 
-    @mapper.createTimeSchedule('0 0 12 * * *')
+    /** 每日 GitHub 热榜 — 与 src/openclaw/cron/github-trending.ts / openclaw cron「0 9 * * *」Asia/Shanghai 一致 */
+    @mapper.createTimeSchedule('0 0 9 * * *')
     async publishGithubTrendingTimer(c: LagrangeContext<Message>) {
         const imagePath = await getGithubTrendingImage();
         if (imagePath) {
@@ -122,6 +124,7 @@ export class OpenMcpChannel {
         }
     }
 
+    /** 群聊摘要定时 — 同类需求见 src/openclaw/cron/message-summary.ts（脚本为话题图/独立连接；此处沿用进程内 exportTodayGroupMessagesPdf） */
     @mapper.createTimeSchedule('0 0 23 * * *')
     async groupSummaryTimer(c: LagrangeContext<GroupMessage | PrivateMessage>) {
         await exportTodayGroupMessagesPdf(c, qq_groups.OPENMCP_DEV, qq_groups.OPENMCP_DEV);
