@@ -16,15 +16,18 @@ export interface ProfileCardData {
     }[];
 }
 
-// 黑白极简配色
+// 配色：黑白极简 + 波尔多红 & 马尔斯绿主题色
 const COLORS = {
     background: 'transparent',
     black: '#000000',
     text: '#333333',
-    textLight: '#666666',
+    textLight: '#444444',
     textMuted: '#999999',
     border: '#000000',
     accent: '#333333',
+    bordeauxRed: '#4C0009',
+    marsGreen: '#01847F',
+    highlight: '#01847F',
 };
 
 // Lucide Icon Components
@@ -113,9 +116,12 @@ const getBase64Image = (imagePath: string): string => {
 export async function generateProfileCard(data: ProfileCardData): Promise<string | null> {
     try {
         // 加载字体
-        const fontRegular = readFileSync('./assets/fonts/NotoSerifSC-Regular.ttf');
-        const fontBold = readFileSync('./assets/fonts/NotoSerifSC-Bold.ttf');
+        const fontRegular = readFileSync('./assets/fonts/NotoSansSC-Regular.ttf');
+        const fontBlack = readFileSync('./assets/fonts/NotoSansSC-Black.ttf');
         const fontBebas = readFileSync('./assets/fonts/BebasNeue.ttf');
+        const fontMontserrat = readFileSync('./assets/fonts/Montserrat-Regular.ttf');
+        const fontCinzel = readFileSync('./assets/fonts/Cinzel-Regular.ttf');
+        const fontDancingScript = readFileSync('./assets/fonts/DancingScript-Regular.ttf');
 
         const avatarBase64 = getBase64Image(data.avatar);
 
@@ -126,7 +132,7 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                 width: 1200,
                 height: 630,
                 backgroundColor: 'transparent',
-                fontFamily: 'Noto Serif SC',
+                fontFamily: 'Noto Sans SC',
                 color: COLORS.black,
                 borderRadius: '20px',
                 border: '1px solid #000000',
@@ -228,16 +234,19 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                             <div style={{
                                 display: 'flex',
                                 fontSize: '64px',
-                                fontWeight: 700,
+                                fontWeight: 900,
+                                fontFamily: 'Noto Sans SC',
                                 color: COLORS.black,
-                                letterSpacing: '8px',
+                                letterSpacing: '4px',
                                 marginBottom: '8px',
                             }}>
                                 {data.name}
                             </div>
                             <div style={{
                                 display: 'flex',
-                                fontSize: '14px',
+                                fontSize: '18px',
+                                fontWeight: 400,
+                                fontFamily: 'Noto Sans SC',
                                 color: COLORS.textLight,
                                 letterSpacing: '2px',
                             }}>
@@ -254,26 +263,24 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                         gap: '12px',
                         marginTop: '6px',
                     }}>
-
                         <div style={{
                             display: 'flex',
-                            fontSize: '16px',
+                            fontSize: '30px',
                             color: '#555555',
-                            letterSpacing: '3px',
+                            letterSpacing: '2px',
                             fontWeight: 400,
+                            fontFamily: 'Bebas Neue',
                         }}>
                             Stay Hungry, Stay Foolish
                         </div>
                     </div>
-
-                    {/* 中部：分隔线 */}
                     <div style={{
                         display: 'flex',
-                        width: '100%',
-                        height: '1px',
+                        width: '60px',
+                        height: '2px',
                         backgroundColor: COLORS.black,
-                        margin: '20px 0',
-                        opacity: 0.12,
+                        opacity: 0.2,
+                        margin: '6px 0 0 0',
                     }} />
 
                     {/* 下部：联系方式 */}
@@ -289,9 +296,10 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                             flexDirection: 'column',
                             gap: '12px',
                         }}>
-                            {/* 文章发布地点 - 带图标，放大字体 */}
+                            {/* 文章发布地点 - 带图标，放大字体，彩色主题 */}
                             {data.platforms.slice(0, 3).map((platform, i) => {
                                 const IconComponent = IconMap[platform.icon];
+                                const themeColor = i === 0 ? COLORS.bordeauxRed : i === 1 ? COLORS.marsGreen : COLORS.bordeauxRed;
                                 return (
                                     <div key={i} style={{
                                         display: 'flex',
@@ -304,7 +312,7 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                                             flexDirection: 'row',
                                             alignItems: 'center',
                                             gap: '8px',
-                                            width: '150px'
+                                            width: '170px'
                                         }}>
                                             <div style={{
                                                 display: 'flex',
@@ -313,13 +321,13 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                             }}>
-                                                <IconComponent size={18} color={COLORS.black} />
+                                                <IconComponent size={18} color={themeColor} />
                                             </div>
                                             <div style={{
                                                 display: 'flex',
-                                                fontSize: '22px',
-                                                fontWeight: 700,
-                                                color: COLORS.black,
+                                                fontSize: '24px',
+                                                fontWeight: 400,
+                                                color: themeColor,
                                                 minWidth: '100px',
                                                 letterSpacing: '1px',
                                             }}>
@@ -328,13 +336,21 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                                         </div>
                                         <div style={{
                                             display: 'flex',
-                                            fontSize: '22px',
-                                            color: COLORS.textLight,
+                                            fontSize: '24px',
+                                            color: COLORS.black,
                                             letterSpacing: '0.5px',
                                             maxWidth: '520px',
                                             flexWrap: 'wrap',
                                         }}>
-                                            {platform.handle}
+                                            {platform.name === '微信公众号' ? (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap' }}>搜一搜<span style={{ color: COLORS.bordeauxRed }}>「汇尘轩」</span></div>
+                                            ) : platform.name === '知乎' ? (
+                                                <span style={{ color: COLORS.marsGreen }}>@锦恢</span>
+                                            ) : platform.name === '订阅博客' ? (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap' }}>浏览器搜索<span style={{ color: COLORS.bordeauxRed }}>「汇尘轩/锦恢的博客」</span> / 访问 kirigaya.cn，点击右上角的订阅</div>
+                                            ) : (
+                                                platform.handle
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -366,14 +382,13 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                                             height: '20px',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            opacity: 0.6,
                                         }}>
-                                            <IconComponent size={16} color={COLORS.textMuted} />
+                                            <IconComponent size={16} color={COLORS.textLight} />
                                         </div>
                                         <div style={{
                                             display: 'flex',
-                                            fontSize: '13px',
-                                            fontWeight: 700,
+                                            fontSize: '15px',
+                                            fontWeight: 400,
                                             color: COLORS.textLight,
                                             minWidth: '100px',
                                             letterSpacing: '0.5px',
@@ -382,7 +397,7 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                                         </div>
                                         <div style={{
                                             display: 'flex',
-                                            fontSize: '12px',
+                                            fontSize: '14px',
                                             color: COLORS.textMuted,
                                             letterSpacing: '0.3px',
                                         }}>
@@ -391,7 +406,6 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                                     </div>
                                 );
                             })}
-
                         </div>
 
                         {/* 右下角品牌 - 水平和垂直居中 */}
@@ -404,9 +418,10 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                             <div style={{
                                 display: 'flex',
                                 fontSize: '36px',
-                                fontWeight: 700,
+                                fontWeight: 900,
+                                fontFamily: 'Noto Sans SC',
                                 color: COLORS.black,
-                                letterSpacing: '8px',
+                                letterSpacing: '4px',
                             }}>
                                 汇尘轩
                             </div>
@@ -419,7 +434,7 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                             }}>
                                 <div style={{
                                     display: 'flex',
-                                    fontSize: '11px',
+                                    fontSize: '13px',
                                     color: COLORS.textMuted,
                                     letterSpacing: '4px',
                                 }}>
@@ -434,10 +449,13 @@ export async function generateProfileCard(data: ProfileCardData): Promise<string
                 width: 1200,
                 height: 630,
                 fonts: [
-                    { name: 'Noto Serif SC', data: fontRegular, weight: 400 },
-                    { name: 'Noto Serif SC', data: fontBold, weight: 700 },
+                    { name: 'Noto Sans SC', data: fontRegular, weight: 400 },
+                    { name: 'Noto Sans SC', data: fontBlack, weight: 900 },
                     { name: 'Bebas Neue', data: fontBebas, weight: 400 },
                     { name: 'Bebas Neue', data: fontBebas, weight: 700 },
+                    { name: 'Montserrat', data: fontMontserrat, weight: 400 },
+                    { name: 'Cinzel', data: fontCinzel, weight: 400 },
+                    { name: 'Dancing Script', data: fontDancingScript, weight: 400 },
                 ],
             }
         );
